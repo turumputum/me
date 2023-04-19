@@ -67,7 +67,7 @@
 extern int FTP_TASK_FINISH_BIT;
 extern EventGroupHandle_t xEventTask;
 
-extern configuration monofon_config;
+extern configuration me_config;
 
 tcpip_adapter_if_t tcpip_if_ftp[MAX_ACTIVE_INTERFACES] = { TCPIP_ADAPTER_IF_MAX };
 
@@ -1389,8 +1389,8 @@ void ftp_task(void *pvParameters) {
 	uint32_t startTick = xTaskGetTickCount();
 	uint32_t heapBefore = xPortGetFreeHeapSize();
 
-	strcpy(ftp_user, monofon_config.FTP_login);
-	strcpy(ftp_pass, monofon_config.FTP_pass);
+	strcpy(ftp_user, me_config.FTP_login);
+	strcpy(ftp_pass, me_config.FTP_pass);
 	ESP_LOGI(FTP_TAG, "ftp_user:[%s] ftp_pass:[%s]", ftp_user, ftp_pass);
 
 	uint64_t elapsed, time_ms = mp_hal_ticks_ms();

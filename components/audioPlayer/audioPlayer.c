@@ -16,6 +16,7 @@
 #include "mp3_decoder.h"
 #include "filter_resample.h"
 #include "equalizer.h"
+#include "string.h"
 
 #include "audio_event_iface.h"
 #include "periph_wifi.h"
@@ -35,9 +36,8 @@ char *url = NULL;
 
 audio_event_iface_handle_t evt;
 
-extern stateStruct monofon_state;
-extern configuration monofon_config;
-
+extern stateStruct me_state;
+extern configuration me_config;
 
 void audioInit(void) {
 	uint32_t startTick = xTaskGetTickCount();
@@ -49,7 +49,7 @@ void audioInit(void) {
 
 	ESP_LOGD(TAG, "Create audio pipeline for playback");
 	audio_pipeline_cfg_t pipeline_cfg = DEFAULT_AUDIO_PIPELINE_CONFIG();
-	pipeline_cfg.rb_size = 4*1024;
+	pipeline_cfg.rb_size = 4 * 1024;
 	pipeline = audio_pipeline_init(&pipeline_cfg);
 	mem_assert(pipeline);
 
@@ -61,7 +61,7 @@ void audioInit(void) {
 	i2s_cfg.type = AUDIO_STREAM_WRITER;
 	i2s_cfg.task_prio = 23; //23
 	i2s_cfg.use_alc = true;
-	i2s_cfg.volume = -34 + (monofon_config.volume / 3);
+	i2s_cfg.volume = -34 + (me_config.volume / 3);
 	i2s_stream_writer = i2s_stream_init(&i2s_cfg);
 
 	fatfs_stream_cfg_t fatfs_cfg = FATFS_STREAM_CFG_DEFAULT();
@@ -98,8 +98,8 @@ void audioInit(void) {
 	ESP_LOGD(TAG, "Listen for all pipeline events");
 	audio_pipeline_set_listener(pipeline, evt);
 
-
-	ESP_LOGD(TAG, "Audio init complite. Duration: %d ms. Heap usage: %d free Heap:%d", (xTaskGetTickCount() - startTick) * portTICK_RATE_MS, heapBefore - xPortGetFreeHeapSize(),xPortGetFreeHeapSize());
+	ESP_LOGD(TAG, "Audio init complite. Duration: %d ms. Heap usage: %d free Heap:%d", (xTaskGetTickCount() - startTick) * portTICK_RATE_MS, heapBefore - xPortGetFreeHeapSize(),
+			xPortGetFreeHeapSize());
 }
 
 void audioDeinit(void) {
@@ -114,40 +114,50 @@ void audioDeinit(void) {
 	audio_element_deinit(rsp_handle);
 }
 
+void setVolume(uint8_t vol) {
+	i2s_alc_volume_set(i2s_stream_writer, -34 + (vol / 3));
+}
+
 void audioPlay(void) {
 	uint32_t heapBefore = xPortGetFreeHeapSize();
+	ESP_LOGD(TAG, "audioPlay state: %d", audio_element_get_state(i2s_stream_writer));
 
 	audio_element_info_t music_info = { 0 };
 	audio_element_getinfo(mp3_decoder, &music_info);
 	ESP_LOGD(TAG, "Received music info from mp3 decoder, sample_rates=%d, bits=%d, ch=%d", music_info.sample_rates, music_info.bits, music_info.channels);
-	//i2s_alc_volume_set(i2s_stream_writer,monofon_config.volume) ;
+	setVolume(me_config.volume);
 	audio_element_setinfo(i2s_stream_writer, &music_info);
 	rsp_filter_set_src_info(rsp_handle, music_info.sample_rates, music_info.channels);
 	//url = "/sdcard/monofonRus.mp3";
-	//audio_hal_set_volume(board_handle->audio_hal, monofon_config.volume);
+	//audio_hal_set_volume(board_handle->audio_hal, me_config.volume);
 	//i2s_alc_volume_set(audio_element_handle_t i2s_stream, int volume);
 
-	ESP_LOGD(TAG, "Set volume: %d", monofon_config.volume);
-	audio_element_set_uri(fatfs_stream_reader, monofon_config.lang[monofon_state.currentLang].audioFile);
+	ESP_LOGD(TAG, "Set volume: %d", me_config.volume);
+	audio_element_set_uri(fatfs_stream_reader, me_config.soundTracks[me_state.currentTrack]);
 	//audio_pipeline_reset_ringbuffer(pipeline);
 	//audio_pipeline_reset_elements(pipeline);
 	//audio_pipeline_change_state(pipeline, AEL_STATE_INIT);
 	audio_pipeline_run(pipeline);
 
-	ESP_LOGD(TAG, "Start playing file:%s Heap usage:%d, Free heap:%d",monofon_config.lang[monofon_state.currentLang].audioFile, heapBefore - xPortGetFreeHeapSize(), xPortGetFreeHeapSize());
+	ESP_LOGD(TAG, "Start playing file:%s Heap usage:%d, Free heap:%d", me_config.soundTracks[me_state.currentTrack], heapBefore - xPortGetFreeHeapSize(), xPortGetFreeHeapSize());
 }
 
 void audioStop(void) {
 	//audio_pipeline_pause(pipeline);
 	//ESP_ERROR_CHECK(audio_pipeline_stop(pipeline));
-	audio_pipeline_stop(pipeline);
-	audio_pipeline_wait_for_stop(pipeline);
+
+	audio_element_state_t el_state = audio_element_get_state(i2s_stream_writer);
+	ESP_LOGD(TAG, "audioStop state: %d", el_state);
+	if ((el_state != AEL_STATE_FINISHED) && (el_state != AEL_STATE_STOPPED)) {
+		audio_pipeline_stop(pipeline);
+		audio_pipeline_wait_for_stop(pipeline);
+
+		ESP_LOGD(TAG, "Stop playing. Free heap:%d", xPortGetFreeHeapSize());
+	}
 	ESP_ERROR_CHECK(audio_pipeline_terminate(pipeline));
 	ESP_ERROR_CHECK(audio_pipeline_reset_ringbuffer(pipeline));
 	ESP_ERROR_CHECK(audio_pipeline_reset_elements(pipeline));
 	ESP_ERROR_CHECK(audio_pipeline_change_state(pipeline, AEL_STATE_INIT));
-
-	ESP_LOGD(TAG, "Stop playing. Free heap:%d", xPortGetFreeHeapSize());
 }
 
 void audioPause(void) {
@@ -157,17 +167,32 @@ void audioPause(void) {
 }
 
 void listenListener(void *pvParameters) {
-	while(1){
+	while (1) {
 		vTaskDelay(pdMS_TO_TICKS(10));
 
 		audio_event_iface_msg_t msg;
 		esp_err_t ret = audio_event_iface_listen(evt, &msg, portMAX_DELAY);
-		if(ret!=ESP_OK){
-			ESP_LOGD(TAG, "audio_event_iface_listen FAIL: %d", ret);
-		}else{
-			ESP_LOGD(TAG, "audio_event_iface_listen source_type: %d  msg_cmd:%d", msg.source_type, msg.cmd);
+		if (msg.cmd == AEL_MSG_CMD_REPORT_STATUS) {
+			audio_element_state_t el_state = audio_element_get_state(i2s_stream_writer);
+			if (el_state == AEL_STATE_FINISHED) {
+				ESP_LOGD(TAG, "audio_event: AEL_STATE_FINISHED");
+				if (me_config.trackEnd_action == 1) {	//loop
+					ESP_LOGD(TAG, "Loop track");
+					audioStop();
+					audioPlay();
+				} else if ((me_config.trackEnd_action == 2) && (me_state.changeTrack != 1)) {	//next
+					ESP_LOGD(TAG, "Next track");
+					me_state.changeTrack = 1;
+				}
+			}
 		}
+
+//		if(ret!=ESP_OK){
+//			ESP_LOGD(TAG, "audio_event_iface_listen FAIL: %d", ret);
+//		}else{
+//			ESP_LOGD(TAG, "audio_event_iface_listen source_type: %d  msg_cmd:%d ", msg.source_type, msg.cmd);
+//		}
 	}
 
-
+	//i2s_stream_init
 }

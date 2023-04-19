@@ -30,5 +30,10 @@
         }
     ],
     "idf.adapterTargetName": "esp32s3",
-    "idf.flashType": "JTAG"
+    "idf.flashType": "JTAG",
+    "files.associations": {
+        "*.pug": "jade",
+        "esp_peripherals.h": "c",
+        "periph_sdcard.h": "c"
+    }
 }

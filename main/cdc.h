@@ -10,7 +10,7 @@
 
 #include "freertos/task.h"
 
-#define CDC_STACK_SZIE      (configMINIMAL_STACK_SIZE*3)
+#define CDC_STACK_SZIE      (configMINIMAL_STACK_SIZE*8)
 
 StackType_t cdc_stack[CDC_STACK_SZIE];
 StaticTask_t cdc_taskdef;

@@ -7,8 +7,8 @@
 #define LOG_LOCAL_LEVEL ESP_LOG_DEBUG
 static const char *TAG = "mqtt";
 
-extern stateStruct monofon_state;
-extern configuration monofon_config;
+extern stateStruct me_state;
+extern configuration me_config;
 
 char phonUp_State_topic[100];
 char lifeTime_topic[100];
@@ -31,7 +31,7 @@ static void mqtt_event_handler(void *handler_args, esp_event_base_t base, int32_
     switch ((esp_mqtt_event_id_t)event_id) {
     case MQTT_EVENT_CONNECTED:
         ESP_LOGD(TAG, "MQTT_EVENT_CONNECTED");
-        monofon_state.mqtt_error=0;
+        me_state.mqtt_error=0;
         ESP_LOGD(TAG, "MQTT_CONNEKT_OK");
         //msg_id = esp_mqtt_client_subscribe(client, "phonState_topic", 0);
         //ESP_LOGD(TAG, "sent subscribe successful, msg_id=%d", msg_id);
@@ -75,26 +75,26 @@ void mqtt_app_start(void)
     uint32_t startTick = xTaskGetTickCount();
     uint32_t heapBefore = xPortGetFreeHeapSize();
 
-    if(monofon_config.mqttBrokerAdress[0]==0){
+    if(me_config.mqttBrokerAdress[0]==0){
         ESP_LOGW(TAG, "Empty mqtt broker adress, mqtt disable");
-        monofon_state.mqtt_error=1;
+        me_state.mqtt_error=1;
         return;
     }
 
     esp_mqtt_client_config_t mqtt_cfg = {
         //.host = "192.168.88.99",
-        .host = monofon_config.mqttBrokerAdress,
+        .host = me_config.mqttBrokerAdress,
     };
 
-    if(strlen(monofon_config.device_name)==0){
+    if(strlen(me_config.device_name)==0){
         ESP_LOGD(TAG, "Device name is empty, set mac identifier");
-        mqtt_cfg.client_id = monofon_config.ssidT;
-        sprintf(phonUp_State_topic,"%s/phoneUp_state",monofon_config.ssidT);
-        sprintf(lifeTime_topic,"%s/lifeTime_sek",monofon_config.ssidT);
+        mqtt_cfg.client_id = me_config.ssidT;
+        sprintf(phonUp_State_topic,"%s/phoneUp_state",me_config.ssidT);
+        sprintf(lifeTime_topic,"%s/lifeTime_sek",me_config.ssidT);
     }else{
-       sprintf(phonUp_State_topic,"%s/phoneUp_state",monofon_config.device_name); 
-       sprintf(lifeTime_topic,"%s/lifeTime_sek",monofon_config.device_name);
-       mqtt_cfg.client_id = monofon_config.device_name;
+       sprintf(phonUp_State_topic,"%s/phoneUp_state",me_config.device_name);
+       sprintf(lifeTime_topic,"%s/lifeTime_sek",me_config.device_name);
+       mqtt_cfg.client_id = me_config.device_name;
     }
     
 
@@ -102,7 +102,7 @@ void mqtt_app_start(void)
     /* The last argument may be used to pass data to the event handler, in this example mqtt_event_handler */
     ESP_ERROR_CHECK(esp_mqtt_client_register_event(client, ESP_EVENT_ANY_ID, mqtt_event_handler, NULL));
     ESP_ERROR_CHECK(esp_mqtt_client_start(client));
-    monofon_state.mqtt_error=1;
+    me_state.mqtt_error=1;
 
     ESP_LOGD(TAG, "MQTT init complite. Duration: %d ms. Heap usage: %d", (xTaskGetTickCount() - startTick) * portTICK_RATE_MS, heapBefore - xPortGetFreeHeapSize());
 }

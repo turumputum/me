@@ -25,35 +25,32 @@
 #ifndef _AUDIO_BOARD_DEFINITION_H_
 #define _AUDIO_BOARD_DEFINITION_H_
 
-#define BUTTON_VOLUP_ID           0
-#define BUTTON_VOLDOWN_ID         1
-#define BUTTON_MUTE_ID            2
-#define BUTTON_SET_ID             3
+#define BUTTON_VOLUP_ID           0     /* You need to define the GPIO pins of your board */
+#define BUTTON_VOLDOWN_ID         1     /* You need to define the GPIO pins of your board */
+#define BUTTON_MUTE_ID            2     /* You need to define the GPIO pins of your board */
+#define BUTTON_SET_ID             3     /* You need to define the GPIO pins of your board */
+#define BUTTON_MODE_ID            4     /* You need to define the GPIO pins of your board */
+#define BUTTON_PLAY_ID            5     /* You need to define the GPIO pins of your board */
+#define PA_ENABLE_GPIO            6     /* You need to define the GPIO pins of your board */
+#define ADC_DETECT_GPIO           7     /* You need to define the GPIO pins of your board */
+#define BATTERY_DETECT_GPIO       8     /* You need to define the GPIO pins of your board */
+#define SDCARD_INTR_GPIO          9     /* You need to define the GPIO pins of your board */
 
-#define PA_ENABLE_GPIO            GPIO_NUM_12
-#define ADC_DETECT_GPIO           GPIO_NUM_36
-#define BATTERY_DETECT_GPIO       GPIO_NUM_37
+#define SDCARD_OPEN_FILE_NUM_MAX  5
 
-/**
- * @brief SDCARD Function Definition
- *        PMOD2 for one line sdcard
- */
-#define SDCARD_OPEN_FILE_NUM_MAX    5
-#define SDCARD_INTR_GPIO            -1
-#define SDCARD_PWR_CTRL             -1
-#define ESP_SD_PIN_CLK              GPIO_NUM_13
-#define ESP_SD_PIN_CMD              GPIO_NUM_11
-#define ESP_SD_PIN_D0               GPIO_NUM_14
-#define ESP_SD_PIN_D1               -1
-#define ESP_SD_PIN_D2               -1
-#define ESP_SD_PIN_D3               -1
-#define ESP_SD_PIN_D4               -1
-#define ESP_SD_PIN_D5               -1
-#define ESP_SD_PIN_D6               -1
-#define ESP_SD_PIN_D7               -1
-#define ESP_SD_PIN_CD               -1
-#define ESP_SD_PIN_WP               -1
-
+#define BOARD_PA_GAIN 0
+#define ESP_SD_PIN_CLK 0
+#define ESP_SD_PIN_CMD 0
+#define ESP_SD_PIN_D0 0
+#define ESP_SD_PIN_D1 0
+#define ESP_SD_PIN_D2 0
+#define ESP_SD_PIN_D3 0
+#define ESP_SD_PIN_D4 0
+#define ESP_SD_PIN_D5 0
+#define ESP_SD_PIN_D6 0
+#define ESP_SD_PIN_D7 0
+#define ESP_SD_PIN_CD 0
+#define ESP_SD_PIN_WP 0
 
 extern audio_hal_func_t AUDIO_NEW_CODEC_DEFAULT_HANDLE;
 
@@ -69,7 +66,7 @@ extern audio_hal_func_t AUDIO_NEW_CODEC_DEFAULT_HANDLE;
         },                                              \
 };
 
-#define INPUT_KEY_NUM     4
+#define INPUT_KEY_NUM     4             /* You need to define the number of input buttons on your board */
 
 #define INPUT_KEY_DEFAULT_INFO() {                      \
     {                                                   \

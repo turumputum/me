@@ -20,8 +20,8 @@ int ledBright = 0;
 int lightLeds = 0;
 int ledStep = 0;
 
-extern stateStruct monofon_state;
-extern configuration monofon_config;
+extern stateStruct me_state;
+extern configuration me_config;
 
 RgbColor RGB;
 HsvColor HSV;
@@ -91,14 +91,8 @@ HsvColor RgbToHsv(RgbColor rgb) {
 	HsvColor hsv;
 	unsigned char rgbMin, rgbMax;
 
-	rgbMin =
-			rgb.r < rgb.g ?
-					(rgb.r < rgb.b ? rgb.r : rgb.b) :
-					(rgb.g < rgb.b ? rgb.g : rgb.b);
-	rgbMax =
-			rgb.r > rgb.g ?
-					(rgb.r > rgb.b ? rgb.r : rgb.b) :
-					(rgb.g > rgb.b ? rgb.g : rgb.b);
+	rgbMin = rgb.r < rgb.g ? (rgb.r < rgb.b ? rgb.r : rgb.b) : (rgb.g < rgb.b ? rgb.g : rgb.b);
+	rgbMax = rgb.r > rgb.g ? (rgb.r > rgb.b ? rgb.r : rgb.b) : (rgb.g > rgb.b ? rgb.g : rgb.b);
 
 	hsv.v = rgbMax;
 	if (hsv.v == 0) {
@@ -127,16 +121,16 @@ void initLeds() {
 	uint32_t startTick = xTaskGetTickCount();
 	uint32_t heapBefore = xPortGetFreeHeapSize();
 
-	RGB.r = monofon_config.RGB.r;
-	RGB.g = monofon_config.RGB.g;
-	RGB.b = monofon_config.RGB.b;
+	RGB.r = me_config.RGB.r;
+	RGB.g = me_config.RGB.g;
+	RGB.b = me_config.RGB.b;
 
 	HSV.h = 0;
 	HSV.s = 255;
-	HSV.v = monofon_config.brightMax;
+	HSV.v = me_config.brightMax;
 
 	//rmt_config_t config = RMT_DEFAULT_CONFIG_TX(12, RMT_TX_CHANNEL);
-	rmt_config_t config = RMT_DEFAULT_CONFIG_TX(8, RMT_TX_CHANNEL);
+	rmt_config_t config = RMT_DEFAULT_CONFIG_TX(41, RMT_TX_CHANNEL);
 	// set counter clock to 40MHz
 	config.clk_div = 2;
 	config.mem_block_num = 8;
@@ -159,21 +153,15 @@ void initLeds() {
 			front[t] = val;
 		}
 	}
-	ESP_LOGD(TAG,
-			"Leds init complite. Duration: %d ms. Heap usage: %d free heap:%d",
-			(xTaskGetTickCount() - startTick) * portTICK_RATE_MS,
-			heapBefore - xPortGetFreeHeapSize(), xPortGetFreeHeapSize());
+	ESP_LOGD(TAG, "Leds init complite. Duration: %d ms. Heap usage: %d free heap:%d", (xTaskGetTickCount() - startTick) * portTICK_RATE_MS, heapBefore - xPortGetFreeHeapSize(),
+			xPortGetFreeHeapSize());
 
 }
 
 void refreshLeds() {
-
-	uint32_t startTick = xTaskGetTickCount();
-	uint32_t heapBefore = xPortGetFreeHeapSize();
-
 	uint8_t increment = 5;
 
-	if (monofon_config.rainbow == 1) {
+	if (me_config.rainbow == 1) {
 		if (HSV.h < 255) {
 			HSV.h++;
 		} else {
@@ -181,17 +169,16 @@ void refreshLeds() {
 		}
 		RGB = HsvToRgb(HSV);
 
-	} else if (monofon_config.rainbow == 0) {
-		RGB.b = monofon_config.RGB.b;
-		RGB.r = monofon_config.RGB.r;
-		RGB.g = monofon_config.RGB.g;
+	} else if (me_config.rainbow == 0) {
+		RGB.b = me_config.RGB.b;
+		RGB.r = me_config.RGB.r;
+		RGB.g = me_config.RGB.g;
 	}
 
-	if (monofon_state.phoneUp) {
-		if (monofon_config.animate == 1) {
+	if ((me_state.phoneUp) && (me_config.monofonEnable == 1)) {
+		if (me_config.animate == 1) {
 			for (int i = 0; i < LED_COUNT; i++) {
-				strip->set_pixel(strip, i, (float) RGB.r * front[i],
-						(float) RGB.g * front[i], (float) RGB.b * front[i]);
+				strip->set_pixel(strip, i, (float) RGB.r * front[i], (float) RGB.g * front[i], (float) RGB.b * front[i]);
 
 			}
 			strip->refresh(strip, 1);
@@ -203,43 +190,47 @@ void refreshLeds() {
 			}
 			front[LED_COUNT - 1] = tmp;
 		} else {
-			if (currentBright < monofon_config.brightMin) {
+			if (currentBright < me_config.brightMin) {
 				currentBright += increment;
-			} else if (currentBright > monofon_config.brightMin) {
+			} else if (currentBright > me_config.brightMin) {
 				currentBright -= increment;
 			}
-			if (abs(monofon_config.brightMin - currentBright) < increment) {
-				currentBright = monofon_config.brightMin;
+			if (abs(me_config.brightMin - currentBright) < increment) {
+				currentBright = me_config.brightMin;
 			}
 			float tmpBright = ((float) currentBright / 255);
 			for (int i = 0; i < LED_COUNT; i++) {
 
-				strip->set_pixel(strip, i, RGB.r * tmpBright, RGB.g * tmpBright,
-						RGB.b * tmpBright);
+				strip->set_pixel(strip, i, RGB.r * tmpBright, RGB.g * tmpBright, RGB.b * tmpBright);
 			}
 
 			strip->refresh(strip, 1);
 		}
 
-	} else {
-		if (currentBright < monofon_config.brightMax) {
+	} else if (me_config.monofonEnable == 1) {
+		if (currentBright < me_config.brightMax) {
 			currentBright += increment;
-		} else if (currentBright > monofon_config.brightMax) {
+		} else if (currentBright > me_config.brightMax) {
 			currentBright -= increment;
 		}
-		if (abs(monofon_config.brightMax - currentBright) < increment) {
-			currentBright = monofon_config.brightMax;
+		if (abs(me_config.brightMax - currentBright) < increment) {
+			currentBright = me_config.brightMax;
 		}
 		float tmpBright = ((float) currentBright / 255);
 		for (int i = 0; i < LED_COUNT; i++) {
-			strip->set_pixel(strip, i, RGB.r * tmpBright, RGB.g * tmpBright,
-					RGB.b * tmpBright);
-			//ws2812_setPixel_gammaCorrection(RGB.r * tmpBright,RGB.g * tmpBright, RGB.b * tmpBright, i);
+			strip->set_pixel(strip, i, RGB.r * tmpBright, RGB.g * tmpBright, RGB.b * tmpBright);
 		}
-		//ws2812_light();
+
 
 		strip->refresh(strip, 1);
 
+	} else if (me_config.monofonEnable == 0) {
+		for (int i = 0; i < LED_COUNT; i++) {
+			strip->set_pixel(strip, i, 0, 0, 0);
+		}
+		strip->refresh(strip, 1);
+		vTaskDelay(pdMS_TO_TICKS(6));
+		//printf("set black\r\n");
 	}
 
 	//ESP_LOGD(TAG, "ReFresh leds complite, Duration: %d ms. Heap usage: %d", (xTaskGetTickCount() - startTick) * portTICK_RATE_MS, heapBefore - xPortGetFreeHeapSize());

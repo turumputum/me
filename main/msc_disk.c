@@ -25,7 +25,7 @@
 
 #include "bsp/board.h"
 #include "tusb.h"
-#include "spisd.h"
+#include "sd_card.h"
 #include "stdbool.h"
 #include "esp_log.h"
 
