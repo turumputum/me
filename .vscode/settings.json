@@ -30,10 +30,25 @@
         }
     ],
     "idf.adapterTargetName": "esp32s3",
-    "idf.flashType": "JTAG",
+    "idf.flashType": "UART",
+    "idf.monitorBaudRate":"115200",
+    "idf.flashBaudRate":"1500000",
     "files.associations": {
         "*.pug": "jade",
         "esp_peripherals.h": "c",
-        "periph_sdcard.h": "c"
-    }
+        "periph_sdcard.h": "c",
+        "*.ipp": "c",
+        "reporter.h": "c",
+        "task.h": "c",
+        "freertos.h": "c",
+        "ratio": "cpp",
+        "stateconfig.h": "c",
+        "netdb.h": "c",
+        "me_slot_config.h": "c",
+        "random": "c",
+        "portmacro.h": "c",
+        "mcpwm.h": "c",
+        "diskio.h": "c"
+    },
+    "idf.portWin": "COM46"
 }

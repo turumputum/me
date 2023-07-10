@@ -17,7 +17,7 @@
 
 #include "stateConfig.h"
 
-#include "../../main/cdc.h"
+#include "myCDC.h"
 
 #define EXAMPLE_ESP_MAXIMUM_RETRY 5
 

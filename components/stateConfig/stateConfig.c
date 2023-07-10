@@ -13,8 +13,10 @@
 
 #include "audio_error.h"
 #include "audio_mem.h"
-
+#include "me_slot_config.h"
 #include <dirent.h>
+#include "buttons.h"
+#include "help.h"
 
 #define TAG "stateConfig"
 
@@ -29,64 +31,57 @@ static int handler(void *user, const char *section, const char *name, const char
 	configuration *pconfig = (configuration*) user;
 
 #define MATCH(s, n) strcmp(section, s) == 0 && strcmp(name, n) == 0
-	if (MATCH("led", "RGB.r")) {
-		pconfig->RGB.r = atoi(value);
-	} else if (MATCH("led", "RGB.g")) {
-		pconfig->RGB.g = atoi(value);
-	} else if (MATCH("led", "RGB.b")) {
-		pconfig->RGB.b = atoi(value);
-	} else if (MATCH("led", "animate")) {
-		pconfig->animate = atoi(value);
-	} else if (MATCH("led", "rainbow")) {
-		pconfig->rainbow = atoi(value);
-	} else if (MATCH("led", "brightMax")) {
-		pconfig->brightMax = atoi(value);
-	} else if (MATCH("led", "brightMin")) {
-		pconfig->brightMin = atoi(value);
-	} else if (MATCH("player", "volume")) {
-		pconfig->volume = atoi(value);
-	} else if (MATCH("player", "playerMode")) {
-		pconfig->playerMode = atoi(value);
-	} else if (MATCH("player", "monofonEnable")) {
-		pconfig->monofonEnable = atoi(value);
-	} else if (MATCH("player", "trackEnd_action")) {
-		pconfig->trackEnd_action = atoi(value);
-	} else if (MATCH("player", "phoneDown_action")) {
-		pconfig->phoneDown_action = atoi(value);
-	} else if (MATCH("player", "phoneUp_delay")) {
-		pconfig->phoneUp_delay = atoi(value);
-	} else if (MATCH("player", "relay_inverse")) {
-		pconfig->relay_inverse = atoi(value);
-	} else if (MATCH("sens", "phoneSensInverted")) {
-		pconfig->phoneSensInverted = atoi(value);
-	} else if (MATCH("sens", "sensDebug")) {
-		pconfig->sensDebug = atoi(value);
-	} else if (MATCH("sens", "sensMode")) {
-		pconfig->sensMode = atoi(value);
-	} else if (MATCH("WIFI", "WIFI_mode")) {
-		pconfig->WIFI_mode = atoi(value);
-	} else if (MATCH("WIFI", "WIFI_ssid")) {
-		pconfig->WIFI_ssid = strdup(value);
-	} else if (MATCH("WIFI", "WIFI_pass")) {
-		pconfig->WIFI_pass = strdup(value);
-	} else if (MATCH("WIFI", "WIFI_channel")) {
-		pconfig->WIFI_channel = atoi(value);
-	} else if (MATCH("WIFI", "ipAdress")) {
-		pconfig->ipAdress = strdup(value);
-	} else if (MATCH("WIFI", "netMask")) {
-		pconfig->netMask = strdup(value);
-	} else if (MATCH("WIFI", "gateWay")) {
-		pconfig->gateWay = strdup(value);
-	} else if (MATCH("WIFI", "DHCP")) {
-		pconfig->DHCP = atoi(value);
-	} else if (MATCH("WIFI", "FTP_login")) {
-		pconfig->FTP_login = strdup(value);
-	} else if (MATCH("WIFI", "FTP_pass")) {
-		pconfig->FTP_pass = strdup(value);
-	} else if (MATCH("WIFI", "device_name")) {
+
+	if (MATCH("SYSTEM", "device_name")) {
 		pconfig->device_name = strdup(value);
-	} else if (MATCH("WIFI", "mqttBrokerAdress")) {
+	} else if (MATCH("LAN", "LAN_enable")) {
+		pconfig->LAN_enable = atoi(value);
+	} else if (MATCH("LAN", "ipAdress")) {
+		pconfig->ipAdress = strdup(value);
+	} else if (MATCH("LAN", "netMask")) {
+		pconfig->netMask = strdup(value);
+	} else if (MATCH("LAN", "gateWay")) {
+		pconfig->gateWay = strdup(value);
+	} else if (MATCH("LAN", "DHCP")) {
+		pconfig->DHCP = atoi(value);
+	} else if (MATCH("UDP", "udpServerAdress")) {
+		pconfig->udpServerAdress = strdup(value);
+	} else if (MATCH("UDP", "udpServerPort")) {
+		pconfig->udpServerPort = atoi(value);
+	} else if (MATCH("UDP", "udpMyPort")) {
+		pconfig->udpMyPort = atoi(value);
+	} else if (MATCH("OSC", "oscServerAdress")) {
+		pconfig->oscServerAdress = strdup(value);
+	} else if (MATCH("OSC", "oscServerPort")) {
+		pconfig->oscServerPort = atoi(value);
+	} else if (MATCH("OSC", "oscMyPort")) {
+		pconfig->oscMyPort = atoi(value);
+	}  else if (MATCH("MQTT", "mqttBrokerAdress")) {
 		pconfig->mqttBrokerAdress = strdup(value);
+	} else if (MATCH("SLOT_0", "mode")) {
+		pconfig->slot_mode[0] = strdup(value);
+	} else if (MATCH("SLOT_0", "options")) {
+		pconfig->slot_options[0] = strdup(value);
+	} else if (MATCH("SLOT_0", "cross_link")) {
+		pconfig->slot_cross_link[0] = strdup(value);
+	} else if (MATCH("SLOT_1", "mode")) {
+		pconfig->slot_mode[1] = strdup(value);
+	} else if (MATCH("SLOT_1", "options")) {
+		pconfig->slot_options[1] = strdup(value);
+	} else if (MATCH("SLOT_1", "cross_link")) {
+		pconfig->slot_cross_link[1] = strdup(value);
+	} else if (MATCH("SLOT_2", "mode")) {
+		pconfig->slot_mode[2] = strdup(value);
+	} else if (MATCH("SLOT_2", "options")) {
+		pconfig->slot_options[2] = strdup(value);
+	} else if (MATCH("SLOT_2", "cross_link")) {
+		pconfig->slot_cross_link[2] = strdup(value);
+	} else if (MATCH("SLOT_3", "mode")) {
+		pconfig->slot_mode[3] = strdup(value);
+	} else if (MATCH("SLOT_3", "options")) {
+		pconfig->slot_options[3] = strdup(value);
+	} else if (MATCH("SLOT_3", "cross_link")) {
+		pconfig->slot_cross_link[3] = strdup(value);
 	} else {
 		return 0; /* unknown section/name, error */
 	}
@@ -127,38 +122,43 @@ void load_Default_Config(void) {
 
 	me_config.DHCP = 0;
 
-	me_config.ipAdress = strdup("10.0.0.1");
+	me_config.ipAdress = strdup("192.168.88.33");
 	me_config.netMask = strdup("255.255.255.0");
-	me_config.gateWay = strdup("10.0.0.1");
+	me_config.gateWay = strdup("192.168.88.1");
 
 	me_config.FTP_login = strdup("user");
 	me_config.FTP_pass = strdup("pass");
 
 	me_config.mqttBrokerAdress = strdup("");
-
-	me_config.brightMax = 200;
-	me_config.brightMin = 0;
-	me_config.RGB.r = 0;
-	me_config.RGB.g = 0;
-	me_config.RGB.b = 200;
-	me_config.animate = 1;
-	me_config.rainbow = 0;
-
-	me_config.monofonEnable = 1;
-	me_config.trackEnd_action = 0; //stop
-	me_config.phoneDown_action = 0; //none
-	me_config.playerMode = 1; // SD_card source
-	me_config.volume = 60;
-	me_config.phoneUp_delay = 500; //0,5 sek
-	me_config.relay_inverse = 0;
-
-	me_config.sensMode = 1; //hall sensor
-	me_config.phoneSensInverted = 0;
-	me_config.sensDebug = 0;
+	
+	me_config.udpServerAdress = strdup("");
+	me_config.udpServerPort = 0;
+	me_config.udpMyPort = 0;
+	
+	me_config.oscServerAdress = strdup("");
+	me_config.oscServerPort = 0;
+	me_config.oscMyPort = 0;
 
 	me_state.numOfTrack = 0;
+	me_state.MQTT_init_res = -1;
 
-	ESP_LOGD(TAG, "Load default config complite. Duration: %d ms. Heap usage: %d", (xTaskGetTickCount() - startTick) * portTICK_RATE_MS, heapBefore - xPortGetFreeHeapSize());
+	me_state.udp_socket = -1;
+	me_state.osc_socket = -1;
+
+
+
+	for (int i = 0; i < 8; i++) {
+		me_state.slot_task[i]=NULL;
+
+		char *str_0 = calloc(1, sizeof(char));
+		me_config.slot_mode[i] = str_0;
+		char *str_1 = calloc(1, sizeof(char));
+		me_config.slot_options[i] = str_1;
+		char *str_2 = calloc(1, sizeof(char));
+		me_config.slot_cross_link[i] = str_2;
+	}
+
+	ESP_LOGD(TAG, "Load default config complite. Duration:%d ms. Heap usage:%d free Heap:%d", (xTaskGetTickCount() - startTick) * portTICK_RATE_MS, heapBefore - xPortGetFreeHeapSize(), xPortGetFreeHeapSize());
 }
 
 uint8_t loadConfig(void) {
@@ -180,31 +180,8 @@ uint8_t loadConfig(void) {
 		return res;
 	}
 
-	ESP_LOGD(TAG, "Load config complite. Duration: %d ms. Heap usage: %d", (xTaskGetTickCount() - startTick) * portTICK_RATE_MS, heapBefore - xPortGetFreeHeapSize());
+	ESP_LOGD(TAG, "Load config complite. Duration:%d ms. Heap usage:%d free Heap:%d", (xTaskGetTickCount() - startTick) * portTICK_RATE_MS, heapBefore - xPortGetFreeHeapSize(), xPortGetFreeHeapSize());
 	return res;
-
-//	ESP_LOGD(TAG, "\nLoad config:");
-//	ESP_LOGD(TAG, "[LOG]");
-//	ESP_LOGD(TAG, "me_config.logLevel = %d", me_config.logLevel);
-//	ESP_LOGD(TAG, "[WIFI]");
-//	ESP_LOGD(TAG, "me_config.WIFI_mode = %d", me_config.WIFI_mode);
-//	ESP_LOGD(TAG, "me_config.WIFI_ssid = %s", me_config.WIFI_ssid);
-//	ESP_LOGD(TAG, "me_config.WIFI_pass = %s", me_config.WIFI_pass);
-//	ESP_LOGD(TAG, "me_config.WIFI_channel = %d", me_config.WIFI_channel);
-//	ESP_LOGD(TAG, "me_config.ipAdress = %s", me_config.ipAdress);
-//	ESP_LOGD(TAG, "me_config.netMask = %s", me_config.netMask);
-//	ESP_LOGD(TAG, "me_config.gateWay = %s", me_config.gateWay);
-//	ESP_LOGD(TAG, "[leds]\n");
-//	ESP_LOGD(TAG, "me_config.brightMax = %d", me_config.brightMax);
-//	ESP_LOGD(TAG, "me_config.brightMin = %d", me_config.brightMin);
-//	ESP_LOGD(TAG, "me_config.RGB.r = %d", me_config.RGB.r);
-//	ESP_LOGD(TAG, "me_config.RGB.g = %d", me_config.RGB.g);
-//	ESP_LOGD(TAG, "me_config.RGB.b = %d", me_config.RGB.b);
-//	ESP_LOGD(TAG, "me_config.animate = %d", me_config.animate);
-//	ESP_LOGD(TAG, "me_config.rainbow = %d", me_config.rainbow);
-//	ESP_LOGD(TAG, "[sens]");
-//	ESP_LOGD(TAG, "me_config.phoneSensInverted = %d", me_config.phoneSensInverted);
-//	ESP_LOGD(TAG, "me_config.sensDebug = %d", me_config.sensDebug);
 
 }
 
@@ -213,7 +190,7 @@ int saveConfig(void) {
 	ESP_LOGD(TAG, "saving file");
 
 	FILE *configFile;
-	char tmp[100];
+	char tmp[200];
 
 	if (remove("/sdcard/config.ini")) {
 		//ESP_LOGD(TAG, "/sdcard/config.ini delete failed");
@@ -226,27 +203,36 @@ int saveConfig(void) {
 		return ESP_FAIL;
 	}
 
-	sprintf(tmp, ";config file Monofon. Ver:%s \r\n\r\n", VERSION);
+	sprintf(tmp, ";config file Monofon. Ver:%s \r\n", VERSION);
 	fprintf(configFile, tmp);
 	memset(tmp, 0, strlen(tmp));
 
-	sprintf(tmp, "\r\n[WIFI] \r\n");
+	sprintf(tmp, "\r\n[SYSTEM] \r\n");
 	fprintf(configFile, tmp);
 	memset(tmp, 0, strlen(tmp));
 
 	sprintf(tmp, "device_name = %s \r\n", me_config.device_name);
 	fprintf(configFile, tmp);
 	memset(tmp, 0, strlen(tmp));
-	sprintf(tmp, "WIFI_mode = %d ;0-disable, 1-AP mode, 2-station mode \r\n", me_config.WIFI_mode);
+
+//	sprintf(tmp, "WIFI_mode = %d ;0-disable, 1-AP mode, 2-station mode \r\n",
+//			me_config.WIFI_mode);
+//	fprintf(configFile, tmp);
+//	memset(tmp, 0, strlen(tmp));
+//	sprintf(tmp, "WIFI_ssid = %s \r\n", me_config.WIFI_ssid);
+//	fprintf(configFile, tmp);
+//	memset(tmp, 0, strlen(tmp));
+//	sprintf(tmp, "WIFI_pass = %s \r\n", me_config.WIFI_pass);
+//	fprintf(configFile, tmp);
+//	memset(tmp, 0, strlen(tmp));
+//	sprintf(tmp, "WIFI_channel = %d \r\n", me_config.WIFI_channel);
+//	fprintf(configFile, tmp);
+//	memset(tmp, 0, strlen(tmp));
+
+	sprintf(tmp, "\r\n[LAN] \r\n");
 	fprintf(configFile, tmp);
 	memset(tmp, 0, strlen(tmp));
-	sprintf(tmp, "WIFI_ssid = %s \r\n", me_config.WIFI_ssid);
-	fprintf(configFile, tmp);
-	memset(tmp, 0, strlen(tmp));
-	sprintf(tmp, "WIFI_pass = %s \r\n", me_config.WIFI_pass);
-	fprintf(configFile, tmp);
-	memset(tmp, 0, strlen(tmp));
-	sprintf(tmp, "WIFI_channel = %d \r\n", me_config.WIFI_channel);
+	sprintf(tmp, "LAN_enable = %d ;0-disable, 1-enable \r\n", me_config.LAN_enable);
 	fprintf(configFile, tmp);
 	memset(tmp, 0, strlen(tmp));
 	sprintf(tmp, "DHCP = %d ;0-disable, 1-enable \r\n", me_config.DHCP);
@@ -261,78 +247,86 @@ int saveConfig(void) {
 	sprintf(tmp, "gateWay = %s \r\n", me_config.gateWay);
 	fprintf(configFile, tmp);
 	memset(tmp, 0, strlen(tmp));
-	sprintf(tmp, "FTP_login = %s \r\n", me_config.FTP_login);
+//	sprintf(tmp, "FTP_login = %s \r\n", me_config.FTP_login);
+//	fprintf(configFile, tmp);
+//	memset(tmp, 0, strlen(tmp));
+//	sprintf(tmp, "FTP_pass = %s \r\n", me_config.FTP_pass);
+//	fprintf(configFile, tmp);
+//	memset(tmp, 0, strlen(tmp));
+	sprintf(tmp, "\r\n[UDP] \r\n");
 	fprintf(configFile, tmp);
 	memset(tmp, 0, strlen(tmp));
-	sprintf(tmp, "FTP_pass = %s \r\n", me_config.FTP_pass);
+	sprintf(tmp, "udpServerAdress = %s \r\n", me_config.udpServerAdress);
+	fprintf(configFile, tmp);
+	memset(tmp, 0, strlen(tmp));
+	sprintf(tmp, "udpServerPort = %d \r\n", me_config.udpServerPort);
+	fprintf(configFile, tmp);
+	memset(tmp, 0, strlen(tmp));
+	sprintf(tmp, "udpMyPort = %d \r\n", me_config.udpMyPort);
+	fprintf(configFile, tmp);
+	memset(tmp, 0, strlen(tmp));
+
+
+	sprintf(tmp, "\r\n[OSC] \r\n");
+	fprintf(configFile, tmp);
+	memset(tmp, 0, strlen(tmp));
+	sprintf(tmp, "oscServerAdress = %s \r\n", me_config.oscServerAdress);
+	fprintf(configFile, tmp);
+	memset(tmp, 0, strlen(tmp));
+	sprintf(tmp, "oscServerPort = %d \r\n", me_config.oscServerPort);
+	fprintf(configFile, tmp);
+	memset(tmp, 0, strlen(tmp));
+	sprintf(tmp, "oscMyPort = %d \r\n", me_config.oscMyPort);
+	fprintf(configFile, tmp);
+	memset(tmp, 0, strlen(tmp));
+
+
+	sprintf(tmp, "\r\n[MQTT] \r\n");
 	fprintf(configFile, tmp);
 	memset(tmp, 0, strlen(tmp));
 	sprintf(tmp, "mqttBrokerAdress = %s \r\n", me_config.mqttBrokerAdress);
 	fprintf(configFile, tmp);
 	memset(tmp, 0, strlen(tmp));
 
-	sprintf(tmp, "\r\n[led] \r\n");
-	fprintf(configFile, tmp);
-	memset(tmp, 0, strlen(tmp));
-	sprintf(tmp, "brightMax = %d ; 0-255\r\n", me_config.brightMax);
-	fprintf(configFile, tmp);
-	memset(tmp, 0, strlen(tmp));
-	sprintf(tmp, "brightMin = %d ; 0-255\r\n", me_config.brightMin);
-	fprintf(configFile, tmp);
-	memset(tmp, 0, strlen(tmp));
-	sprintf(tmp, "RGB.r = %d ; 0-255 Red color\r\n", me_config.RGB.r);
-	fprintf(configFile, tmp);
-	memset(tmp, 0, strlen(tmp));
-	sprintf(tmp, "RGB.g = %d ; 0-255 Green color\r\n", me_config.RGB.g);
-	fprintf(configFile, tmp);
-	memset(tmp, 0, strlen(tmp));
-	sprintf(tmp, "RGB.b = %d ; 0-255 Blue color\r\n", me_config.RGB.b);
-	fprintf(configFile, tmp);
-	memset(tmp, 0, strlen(tmp));
-	sprintf(tmp, "animate = %d \r\n", me_config.animate);
-	fprintf(configFile, tmp);
-	memset(tmp, 0, strlen(tmp));
-	sprintf(tmp, "rainbow = %d \r\n", me_config.rainbow);
-	fprintf(configFile, tmp);
-	memset(tmp, 0, strlen(tmp));
+	for (int i = 0; i < 4; i++) {
+		sprintf(tmp, "\r\n[SLOT_%d] \r\n", i);
+		fprintf(configFile, tmp);
+		memset(tmp, 0, strlen(tmp));
 
-	sprintf(tmp, "\r\n[player] \r\n");
-	fprintf(configFile, tmp);
-	memset(tmp, 0, strlen(tmp));
-	sprintf(tmp, "monofonEnable = %d ; 0 - disable, 1 - Enable \r\n", me_config.monofonEnable);
-	fprintf(configFile, tmp);
-	memset(tmp, 0, strlen(tmp));
-	sprintf(tmp, "playerMode = %d ; 0 - disable, 1 - SD_card source \r\n", me_config.playerMode);
-	fprintf(configFile, tmp);
-	memset(tmp, 0, strlen(tmp));
-	sprintf(tmp, "volume = %d ;\r\n", me_config.volume);
-	fprintf(configFile, tmp);
-	memset(tmp, 0, strlen(tmp));
-	sprintf(tmp, "trackEnd_action = %d ; 0 - stop, 1 - loop, 2 - next \r\n", me_config.trackEnd_action);
-	fprintf(configFile, tmp);
-	memset(tmp, 0, strlen(tmp));
-	sprintf(tmp, "phoneDown_action = %d ; 0 - none, 1 - next \r\n", me_config.phoneDown_action);
-	fprintf(configFile, tmp);
-	memset(tmp, 0, strlen(tmp));
-	sprintf(tmp, "phoneUp_delay = %d ; ms \r\n", me_config.phoneUp_delay);
-	fprintf(configFile, tmp);
-	memset(tmp, 0, strlen(tmp));
-	sprintf(tmp, "relay_inverse = %d ; \r\n", me_config.relay_inverse);
-	fprintf(configFile, tmp);
-	memset(tmp, 0, strlen(tmp));
+		sprintf(tmp, "mode = %s \r\n", "empty");
+		fprintf(configFile, tmp);
+		memset(tmp, 0, strlen(tmp));
+		sprintf(tmp, "options = %s \r\n", "empty");
+		fprintf(configFile, tmp);
+		memset(tmp, 0, strlen(tmp));
+		sprintf(tmp, "cross_link = %s \r\n", "empty");
+		fprintf(configFile, tmp);
+		memset(tmp, 0, strlen(tmp));
+	}
 
-	sprintf(tmp, "\r\n[sens] \r\n");
-	fprintf(configFile, tmp);
-	memset(tmp, 0, strlen(tmp));
-	sprintf(tmp, "sensMode = %d ; 0-disable, 1-hall sensor mode\r\n", me_config.sensMode);
-	fprintf(configFile, tmp);
-	memset(tmp, 0, strlen(tmp));
-	sprintf(tmp, "phoneSensInverted = %d \r\n", me_config.phoneSensInverted);
-	fprintf(configFile, tmp);
-	memset(tmp, 0, strlen(tmp));
-	sprintf(tmp, "sensDebug = %d \r\n", me_config.sensDebug);
-	fprintf(configFile, tmp);
-	memset(tmp, 0, strlen(tmp));
+	// sprintf(tmp, "\r\n;Standard module_mode: button_optorelay, 3n_mosfet, audio_player_mono \r\n");
+	fprintf(configFile, help);
+	// memset(tmp, 0, strlen(tmp));
+	// sprintf(tmp, "\r\n;Button options: button_inverse\r\n");
+	// fprintf(configFile, tmp);
+	// memset(tmp, 0, strlen(tmp));
+	// sprintf(tmp, ";Button trigger: [device_name]/button_[num_of_slot]:val \r\n");
+	// fprintf(configFile, tmp);
+	// memset(tmp, 0, strlen(tmp));
+	// sprintf(tmp, "\r\n;Optorelay options: optorelay_default_high,optorelay_inverse\r\n");
+	// fprintf(configFile, tmp);
+	// memset(tmp, 0, strlen(tmp));
+	// sprintf(tmp, ";Optorelay action: [device_name]/optorelay_[num_of_slot]:val \r\n");
+	// fprintf(configFile, tmp);
+	// memset(tmp, 0, strlen(tmp));
+
+	// sprintf(tmp, ";Special module_mode for SLOT_0: audio_player_mono \r\n");
+	// 			fprintf(configFile, tmp);
+	// 			memset(tmp, 0, strlen(tmp));
+	// 			sprintf(tmp, ";Special module_options: volume:val, delay:val\r\n");
+	// 			fprintf(configFile, tmp);
+	// 			memset(tmp, 0, strlen(tmp));
+
 
 	vTaskDelay(pdMS_TO_TICKS(100));
 
@@ -347,115 +341,13 @@ int saveConfig(void) {
 	return ESP_OK;
 }
 
-/*
- FRESULT scan_in_dir(const char *file_extension, FF_DIR *dp, FILINFO *fno) {
- FRESULT res = FR_OK;
-
- while (res == FR_OK) {
- res = f_readdir(dp, fno);
-
- if (dp->sect == 0) {
- ESP_LOGD(TAG, "end of file in dir");
- break;
- }
-
- if (fno->fattrib & AM_DIR) {
- ESP_LOGD(TAG, "found subDir = %s", fno->fname);
- } else {
- ESP_LOGD(TAG, "found file = %s", fno->fname);
- char *detect = strrchr(fno->fname, '.');
-
- if (NULL == detect) {
- ESP_LOGD(TAG, "bad file name = %s, res:%d", fno->fname, res);
- // break;
- } else {
- ESP_LOGD(TAG, "found extension:%s", detect);
- detect++;
- if (strcasecmp(detect, file_extension) == 0) {
- ESP_LOGD(TAG, "good file_extension:%s ", fno->fname);
- return FR_OK;
- }
- }
- }
- }
- return -1;
- }
-
- void search_introIcon(const char *path) {
- FRESULT res;
- FF_DIR dir;
- FILINFO fno;
-
- res = f_opendir(&dir, path);
- if (res == FR_OK) {
- res = scan_in_dir((const char* ) { "jpg" }, &dir, &fno);
- if (res == FR_OK && fno.fname[0]) {
- sprintf(me_config.introIco, "/sdcard/%s", fno.fname);
- ESP_LOGI(TAG, "found intro image file: %s", me_config.introIco);
- me_state.introIco_error = 0;
- }
- }
- f_closedir(&dir);
- if (me_state.introIco_error == 1) {
- ESP_LOGD(TAG, "introIcon not found(it should be .jpeg/.jpg 240x240px)");
- }
- }
-
- uint8_t search_contenInDir(const char *path) {
- FRESULT res;
- FF_DIR dir;
- FILINFO fno;
-
- res = f_opendir(&dir, path);
- if (res == FR_OK) {
- ESP_LOGD(TAG, "Open dir: %s", fno.fname);
- res = scan_in_dir((const char* ) { "mp3" }, &dir, &fno);
- if (res == FR_OK) {
-
- memset(me_config.tracks[me_state.numOfTrack].audioFile, 0, 254);
- if (strcmp(path, "/") == 0) {
- sprintf(me_config.tracks[me_state.numOfTrack].audioFile, "/sdcard/%s", fno.fname);
- } else {
- sprintf(me_config.tracks[me_state.numOfTrack].audioFile, "/sdcard/%s/%s", path, fno.fname);
- }
-
- ESP_LOGI(TAG, "found audio file: %s num: %d", me_config.tracks[me_state.numOfTrack].audioFile, me_state.numOfTrack);
- }
- }
- f_closedir(&dir);
-
- res = f_opendir(&dir, path);
- if (res == FR_OK) {
- res = scan_in_dir((const char* ) { "jpg" }, &dir, &fno);
- if (res == FR_OK) {
-
- memset(me_config.tracks[me_state.numOfTrack].icoFile, 0, 254);
- if (strcmp(path, "/") == 0) {
- sprintf(me_config.tracks[me_state.numOfTrack].icoFile, "/sdcard/%s", fno.fname);
- } else {
- sprintf(me_config.tracks[me_state.numOfTrack].icoFile, "/sdcard/%s/%s", path, fno.fname);
- }
-
- ESP_LOGI(TAG, "found image file: %s num: %d", me_config.tracks[me_state.numOfTrack].icoFile, me_state.numOfTrack);
-
- }
- }
- f_closedir(&dir);
- if (me_config.tracks[me_state.numOfTrack].audioFile[0] != 0) {
- me_state.numOfTrack++;
- }
- return me_state.numOfTrack;
- }
- */
-
 uint8_t loadContent(void) {
 	uint32_t startTick = xTaskGetTickCount();
 	uint32_t heapBefore = xPortGetFreeHeapSize();
 	ESP_LOGD(TAG, "Loading content");
 
 	if (me_state.numOfTrack > 0) {
-		ESP_LOGI(TAG, "Load Content complete. numOfTrack:%d Duration: %d ms. Heap usage: %d", me_state.numOfTrack, (xTaskGetTickCount() - startTick) * portTICK_RATE_MS,
-				heapBefore - xPortGetFreeHeapSize());
+		ESP_LOGI(TAG, "Load Content complete. numOfTrack:%d Duration: %d ms. Heap usage: %d", me_state.numOfTrack, (xTaskGetTickCount() - startTick) * portTICK_RATE_MS, heapBefore - xPortGetFreeHeapSize());
 		return ESP_OK;
 	} else {
 		ESP_LOGE(TAG, "Load content fail");
@@ -532,7 +424,6 @@ uint8_t scanFileSystem() {
 	ESP_LOGD(TAG, "scanFileSystem");
 
 	me_state.numOfTrack = 0;
-	me_state.introIco_error = 1;
 	memset(me_config.configFile, 0, 254);
 	memset(me_config.introIco, 0, 254);
 	for (int i = 0; i < MAX_NUM_OF_TRACKS; i++) {
@@ -540,14 +431,8 @@ uint8_t scanFileSystem() {
 		memset(me_config.trackIcons[i], 0, 254);
 	}
 
-//	FRESULT res;
-//	FF_DIR dir;
-//	FILINFO fno;
-
-	//scan_dir res = f_opendir(&dir, "/");
 	me_state.numOfTrack = scan_dir("/");
 	ESP_LOGD(TAG, "scan end, lets sort");
-	//printTrackList();
 
 	//---sorting sound trucks---
 	if (me_state.numOfTrack > 1) {
@@ -601,8 +486,7 @@ uint8_t scanFileSystem() {
 	}
 	printTrackList();
 
-	ESP_LOGI(TAG, "Filesystem scan complete. numOfTrack:%d Duration: %d ms. Heap usage: %d", me_state.numOfTrack, (xTaskGetTickCount() - startTick) * portTICK_RATE_MS,
-			heapBefore - xPortGetFreeHeapSize());
+	ESP_LOGI(TAG, "Filesystem scan complete. numOfTrack:%d Duration: %d ms. Heap usage: %d", me_state.numOfTrack, (xTaskGetTickCount() - startTick) * portTICK_RATE_MS, heapBefore - xPortGetFreeHeapSize());
 	return ESP_OK;
 
 }

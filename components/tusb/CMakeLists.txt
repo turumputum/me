@@ -15,7 +15,7 @@ idf_component_register(SRCS
 		  "src/class/vendor/vendor_device.c"
 		  "src/portable/synopsys/dwc2/dcd_dwc2.c"
                     INCLUDE_DIRS "hw" "src" "../../main"
-                    REQUIRES main )
+                    REQUIRES main myCDC)
 
 
 INCLUDE(CMakeLists_flags.txt)

@@ -3,6 +3,8 @@
 
 #define MAX_NUM_OF_TRACKS 10
 #define FILE_NAME_LEGHT 300
+#define INIT_OK 0
+#define INIT_FAIL -1
 
 static const char *VERSION = "1.0";
 
@@ -21,24 +23,35 @@ typedef enum {
 } led_state_t;
 
 typedef struct {
-	uint8_t changeTrack;
+//	uint8_t changeTrack;
 	uint8_t currentTrack;
 	uint8_t numOfTrack;
-	uint8_t phoneUp;
-	uint8_t prevPhoneUp;
+//	uint8_t phoneUp;
+//	uint8_t prevPhoneUp;
 
 	char * wifiApClientString;
 
-	uint8_t sd_error;
-	uint8_t config_error;
-	uint8_t content_error;
-	uint8_t wifi_error;
-	uint8_t mqtt_error;
-	uint8_t introIco_error;
+	int8_t sd_init_res;
+	int8_t config_init_res;
+	int8_t content_search_res;
+	int8_t slot_init_res;
+	int8_t WIFI_init_res;
+	int8_t LAN_init_res;
+	int8_t MQTT_init_res;
 
-	led_state_t bt_state_mass[8];
+	int8_t udp_socket;
+	int8_t osc_socket;
 
-	led_state_t ledState;
+//	led_state_t bt_state_mass[8];
+//	led_state_t ledState;
+
+	TaskHandle_t slot_task[8];
+
+	char *triggers_topic_list[16];
+	uint8_t triggers_topic_list_index;
+	char *action_topic_list[16];
+	uint8_t action_topic_list_index;
+
 } stateStruct;
 
 
@@ -56,6 +69,8 @@ typedef struct {
 	char * WIFI_pass;
 	uint8_t WIFI_channel;
 	
+	uint8_t LAN_enable;
+
 	uint8_t DHCP;
 
 	char *ipAdress;
@@ -67,40 +82,36 @@ typedef struct {
 	char *FTP_login;
 	char *FTP_pass;
 
+	char *udpServerAdress;
+	uint16_t udpServerPort;
+	uint16_t udpMyPort;
+
+	char *oscServerAdress;
+	uint16_t oscServerPort;
+	uint16_t oscMyPort;
+
+
 	char *mqttBrokerAdress;
 	char *mqttLogin;
 	char *mqttPass;
 
-	char *mqttTopic_phoneUp;
-	char *mqttTopic_lifetime;
-	
 	uint8_t monofonEnable;
-	uint8_t playerMode;
-	uint8_t trackEnd_action;
-	uint8_t phoneDown_action;
-	uint16_t phoneUp_delay;
-	uint8_t relay_inverse;
 
-	int volume;
-
-	int brightMax;
-	int brightMin;
-	RgbColor RGB;
-	uint8_t animate;
-	uint8_t rainbow;
+	uint16_t play_delay;
+	uint8_t volume;
 
 	file_t soundTracks[MAX_NUM_OF_TRACKS];
 	file_t trackIcons[MAX_NUM_OF_TRACKS];
 
-	uint8_t touchSensInverted;
-	uint8_t phoneSensInverted;
-
-	uint8_t sensMode;
-	uint8_t sensDebug;
-	uint16_t magnitudeLevel;
+	char *slot_mode[8];
+	char *slot_options[8];
+	char *slot_cross_link[8];
 
 	char configFile[FILE_NAME_LEGHT];
 	char introIco[FILE_NAME_LEGHT];
+
+	uint8_t f_report_udp;
+	uint8_t f_report_osc;
 
 	char ssidT[33];
 

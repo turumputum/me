@@ -22,7 +22,7 @@
  * THE SOFTWARE.
  *
  */
-
+#include <stdlib.h>
 #include "tusb.h"
 // Connect by enabling internal pull-up resistor on D+/D-
 void dcd_connect(uint8_t rhport);
@@ -245,12 +245,14 @@ uint8_t const * tud_descriptor_configuration_cb(uint8_t index)
              derived_mac_addr[0], derived_mac_addr[1], derived_mac_addr[2],
              derived_mac_addr[3], derived_mac_addr[4], derived_mac_addr[5]);
 
-#if TUD_OPT_HIGH_SPEED
-  // Although we are highspeed, host may be fullspeed.
-  return (tud_speed_get() == TUSB_SPEED_HIGH) ?  desc_hs_configuration : desc_fs_configuration;
-#else
-  return isMscEnabled() ? desc_fs_configuration_combo : desc_fs_configuration_single;
-#endif
+
+  return desc_fs_configuration_combo;
+//#if TUD_OPT_HIGH_SPEED
+//  // Although we are highspeed, host may be fullspeed.
+//  return (tud_speed_get() == TUSB_SPEED_HIGH) ?  desc_hs_configuration : desc_fs_configuration;
+//#else
+//  return isMscEnabled() ? desc_fs_configuration_combo : desc_fs_configuration_single;
+//#endif
 }
 
 static uint16_t _desc_str[32];
@@ -292,6 +294,7 @@ uint16_t const* tud_descriptor_string_cb(uint8_t index, uint16_t langid)
 
   return _desc_str;
 }
+
 void reconnectUsb()
 {
     vTaskDelay(10);
@@ -299,3 +302,25 @@ void reconnectUsb()
     vTaskDelay(10);
     dcd_connect(0);
 }
+
+void usb_device_task(void *param) {
+	(void) param;
+
+	// init device stack on configured roothub port
+	// This should be called after scheduler/kernel is started.
+	// Otherwise it could cause kernel issue since USB IRQ handler does use RTOS queue API.
+	tud_init(BOARD_TUD_RHPORT);
+
+	reconnectUsb();
+
+	// RTOS forever loop
+	while (1) {
+		// put this thread to waiting state until there is new events
+		tud_task();
+
+		// following code only run if tud_task() process at least 1 event
+		tud_cdc_write_flush();
+	}
+}
+
+

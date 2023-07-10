@@ -22,7 +22,7 @@
  * THE SOFTWARE.
  *
  */
-
+#include "myCDC.h"
 #ifndef _TUSB_CONFIG_H_
 #define _TUSB_CONFIG_H_
 
@@ -49,6 +49,7 @@
 //--------------------------------------------------------------------
 
 // defined by board.mk
+#define CFG_TUSB_MCU OPT_MCU_ESP32S3
 #ifndef CFG_TUSB_MCU
 #error CFG_TUSB_MCU must be defined
 #endif

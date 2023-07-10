@@ -1,4 +1,4 @@
-set(COMPONENT_SRCS "msc_disk.c" "cmd.c" "sd_card.c" "main.c" "usb_descriptors.c" "cdc.c" "freertos_hook.c")
+set(COMPONENT_SRCS "usb_descriptors.c" "msc_disk.c"  "sd_card.c" "main.c" "freertos_hook.c")
 set(COMPONENT_ADD_INCLUDEDIRS .)
 
 

@@ -22,6 +22,7 @@
  * THE SOFTWARE.
  *
  */
+#include <stdlib.h>
 
 #include "bsp/board.h"
 #include "tusb.h"
@@ -38,7 +39,7 @@ static const char *TAG = "MSD";
 uint8_t FLAG_PC_AVAILEBLE = 0;
 uint8_t FLAG_PC_EJECT=1;
 
-#if CFG_TUD_MSC
+//#if CFG_TUD_MSC
 
 // Invoked when received SCSI_CMD_INQUIRY
 // Application fill vendor id, product id and revision with string up to 8, 16, 4 characters respectively
@@ -46,7 +47,7 @@ void tud_msc_inquiry_cb(uint8_t lun, uint8_t vendor_id[8], uint8_t product_id[16
 {
   (void) lun;
 
-  const char vid[] = "TinyUSB";
+  const char vid[] = "monofon_me";
   const char pid[] = "Mass Storage";
   const char rev[] = "1.0";
 
@@ -180,4 +181,4 @@ int32_t tud_msc_scsi_cb (uint8_t lun, uint8_t const scsi_cmd[16], void* buffer, 
   return resplen;
 }
 
-#endif
+//#endif

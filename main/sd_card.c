@@ -12,15 +12,19 @@
 #include <dirent.h>
 #include <sys/stat.h>
 
+#include "esp_log.h"
+
 //#define FORCE_SD_40MHZ
 
-esp_err_t sdmmc_host_set_card_clk(int slot, uint32_t freq_khz);
+//esp_err_t sdmmc_host_set_card_clk(int slot, uint32_t freq_khz);
 
 static const char *TAG = "SDMMC";
 
 #define MOUNT_POINT "/sdcard"
 #define SPI_DMA_CHAN    SPI_DMA_CH_AUTO
 #define LOG_LOCAL_LEVEL ESP_LOG_DEBUG
+
+#define SOC_SDMMC_USE_GPIO_MATRIX 1
 
 sdmmc_host_t host = SDMMC_HOST_DEFAULT();
 sdmmc_card_t *card;
@@ -32,7 +36,7 @@ esp_vfs_fat_sdmmc_mount_config_t mount_config = {
 #else
 		.format_if_mount_failed = false,
 #endif // EXAMPLE_FORMAT_IF_MOUNT_FAILED
-		.max_files = 5, .allocation_unit_size = 16 * 1024 };
+		.max_files = 2, .allocation_unit_size = 16 * 1024 };
 
 int spisd_deinit() {
 	return 1;
@@ -73,6 +77,10 @@ int spisd_mount_fs() {
 }
 
 int spisd_init() {
+
+	uint32_t startTick = xTaskGetTickCount();
+		uint32_t heapBefore = xPortGetFreeHeapSize();
+
 	int result = -1;
 	esp_err_t ret;
 
@@ -82,15 +90,18 @@ int spisd_init() {
     host.max_freq_khz  = 40000;
 #endif
 
-	slot_config.clk = 36;
-	slot_config.cmd = 35;
-	slot_config.d0 = 37;
+	slot_config.clk = 47;
+	slot_config.cmd = 21;
+	slot_config.d0 = 48;
 	slot_config.d1 = 38;
 	slot_config.d2 = 39;
 	slot_config.d3 = 40;
 	slot_config.width = 4;
 
-	return spisd_mount_fs();
+	int res=spisd_mount_fs();
+	ESP_LOGD(TAG, "SDcard init complite. Duration: %d ms. Heap usage: %d free Heap:%d", (xTaskGetTickCount() - startTick) * portTICK_RATE_MS, heapBefore - xPortGetFreeHeapSize(),
+				xPortGetFreeHeapSize());
+	return res;
 }
 
 int spisd_get_sector_size() {
