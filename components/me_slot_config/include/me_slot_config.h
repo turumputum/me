@@ -8,4 +8,8 @@
 
 
 int init_slots(void);
+
 int get_option_int_val(int num_of_slot, char* string);
+float get_option_float_val(int num_of_slot, char* string);
+char* get_option_string_val(int num_of_slot, char* option);
+//void get_option_string_val(int num_of_slot, char* option, char* custom_topic);

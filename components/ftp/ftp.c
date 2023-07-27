@@ -1425,15 +1425,18 @@ void ftp_task(void *pvParameters) {
 			if (ftp_state == E_FTP_STE_CONNECTED) {
 				if (ftp_getstate() == E_FTP_STE_READY) {
 					ESP_LOGI(FTP_TAG, "FTP connection terminated. RESET");
-					esp_wifi_stop();
-					esp_wifi_deinit();
+					//esp_wifi_stop();
+					//esp_wifi_deinit();
 					esp_restart();
 				}
 			}
 			ftp_state = ftp_getstate();
 		}
-
-		vTaskDelay(1);
+		if (ftp_state == E_FTP_STE_READY) {
+			vTaskDelay(pdMS_TO_TICKS(10));
+		}else{
+			vTaskDelay(1);
+		}
 
 	} // end while
 

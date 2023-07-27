@@ -16,6 +16,8 @@ char lifeTime_topic[100];
 
 esp_mqtt_client_handle_t client;
 
+char willTopic[255];
+
 extern QueueHandle_t exec_mailbox;
 
 void mqtt_pub(const char *topic, const char *string){
@@ -46,9 +48,38 @@ static void mqtt_event_handler(void *handler_args, esp_event_base_t base, int32_
 		ESP_LOGD(TAG, "MQTT_EVENT_CONNECTED");
 		me_state.MQTT_init_res = ESP_OK;
 		ESP_LOGD(TAG, "MQTT_CONNEKT_OK");
+
 		for (int i = 0; i < me_state.action_topic_list_index; i++) {
 			mqtt_sub(me_state.action_topic_list[i]);
 		}
+
+		mqtt_pub(willTopic, "1");
+
+		char topicList_topic[255];
+		sprintf(topicList_topic, "clients/%s/topics", me_config.device_name);
+		
+		char tmpStr[50];
+		char topicList[1024] = "{\n\"triggers\":[\n";
+		for (int i = 0; i < me_state.triggers_topic_list_index; i++) {
+			memset(tmpStr, 0, sizeof(tmpStr));
+			sprintf(tmpStr, "\"%s\",\n", me_state.triggers_topic_list[i]);
+			strcat(topicList, tmpStr);
+		}
+		topicList[strlen(topicList) - 2] = '\0';
+		strcat(topicList, "\n],\n\"actions\":[\n");
+		for (int i = 0; i < me_state.action_topic_list_index; i++) {
+			memset(tmpStr, 0, sizeof(tmpStr));
+			sprintf(tmpStr, "\"%s\",\n", me_state.action_topic_list[i]);
+			strcat(topicList, tmpStr);
+		}
+		topicList[strlen(topicList) - 2] = '\0';
+		strcat(topicList, "\n]\n}");
+
+		printf("%s\n", topicList);
+
+		//char topicList_payload[strlen("{\n\"triggers\":[\n \n],\n\"actions\":[\n")+strlen(me_state.triggers_topic_list)+strlen(me_state.action_topic_list)+3];
+		
+		//printf("%s\n",me_state.action_topic_list);
 		//msg_id = esp_mqtt_client_subscribe(client, "phonState_topic", 0);
 		//ESP_LOGD(TAG, "sent subscribe successful, msg_id=%d", msg_id);
 		break;
@@ -108,7 +139,8 @@ int mqtt_app_start(void)
         return -1;
     }
 
-	
+	memset(willTopic, 0, sizeof(willTopic));
+	sprintf(willTopic, "clients/%s/state", me_config.device_name);
 
     esp_mqtt_client_config_t mqtt_cfg = {
         //.uri = "mqtt://192.168.1.60:1883",
@@ -116,8 +148,8 @@ int mqtt_app_start(void)
     	//.client_id = me_config.device_name,
         .host = me_config.mqttBrokerAdress,
 		//TODO write will msg
-		//.lwt_topic
-		//.lwt_msg
+		.lwt_topic = willTopic,
+		.lwt_msg = "0",
     };
 
 	//ESP_LOGD(TAG, "Broker addr:%s", mqtt_cfg.uri);

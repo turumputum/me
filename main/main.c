@@ -67,6 +67,8 @@
 
 #include "p9813.h"
 
+#include "tachometer.h"
+
 
 extern uint8_t SLOTS_PIN_MAP[4][3];
 
@@ -96,6 +98,8 @@ extern uint8_t FTP_SESSION_START_FLAG;
 extern uint8_t FLAG_PC_AVAILEBLE;
 extern uint8_t FLAG_PC_EJECT;
 
+extern const char* VERSION;
+
 extern void usb_device_task(void *param);
 
 RTC_NOINIT_ATTR int RTC_flagMscEnabled;
@@ -103,10 +107,7 @@ RTC_NOINIT_ATTR int RTC_flagMscEnabled;
 extern exec_message_t exec_message;
 extern QueueHandle_t exec_mailbox;
 
-uint8_t flag_ccw, flag_cw;
-
-uint8_t led_segment = 0;
-uint8_t prev_led_segment;
+wl_handle_t s_wl_handle = WL_INVALID_HANDLE;
 
 // static task
 StackType_t usb_device_stack[USBD_STACK_SIZE];
@@ -152,30 +153,10 @@ void nvs_init()
 	ESP_LOGD(TAG, "NVS init complite. Duration: %d ms. Heap usage: %d free heap:%d", (xTaskGetTickCount() - startTick) * portTICK_RATE_MS, heapBefore - xPortGetFreeHeapSize(), xPortGetFreeHeapSize());
 }
 
-void spiffs_init()
-{
-
-	uint32_t startTick = xTaskGetTickCount();
-	uint32_t heapBefore = xPortGetFreeHeapSize();
-	esp_err_t ret;
-	esp_vfs_spiffs_conf_t conf = {.base_path = "/spiffs", .partition_label = NULL, .max_files = 10, .format_if_mount_failed = true};
-	ret = esp_vfs_spiffs_register(&conf);
-	size_t total = 0, used = 0;
-	ret = esp_spiffs_info(NULL, &total, &used);
-
-	if (ret != ESP_OK)
-	{
-		ESP_LOGE(TAG, "Failed to get SPIFFS partition information (%s)", esp_err_to_name(ret));
-	}
-	else
-	{
-		ESP_LOGD(TAG, "SPIFFS init complite. Duration: %d ms. Heap usage: %d free heap:%d", (xTaskGetTickCount() - startTick) * portTICK_RATE_MS, heapBefore - xPortGetFreeHeapSize(), xPortGetFreeHeapSize());
-		ESP_LOGD(TAG, "Partition size: total: %d, used: %d", total, used);
-	}
-}
 
 void mdns_start(void)
 {
+	//TO-DO mdns dont work whith ethernet
 	uint32_t startTick = xTaskGetTickCount();
 	uint32_t heapBefore = xPortGetFreeHeapSize();
 	char mdnsName[80];
@@ -195,11 +176,11 @@ void mdns_start(void)
 
 	ESP_ERROR_CHECK(mdns_init());
 	ESP_ERROR_CHECK(mdns_hostname_set(mdnsName));
-	ESP_ERROR_CHECK(mdns_instance_name_set("monofon-instance"));
+	ESP_ERROR_CHECK(mdns_instance_name_set("me-instance"));
 	mdns_service_add(NULL, "_ftp", "_tcp", 21, NULL, 0);
-	mdns_service_instance_name_set("_ftp", "_tcp", "Monofon FTP server");
+	mdns_service_instance_name_set("_ftp", "_tcp", "me FTP server");
 	strcat(mdnsName, ".local");
-	ESP_LOGI(TAG, "mdns hostname set to: %s", mdnsName);
+	ESP_LOGD(TAG, "mdns hostname set to: %s", mdnsName);
 	mdns_txt_item_t serviceTxtData[1] = {
 		{"URL", strdup(mdnsName)},
 	};
@@ -271,95 +252,28 @@ void setLogLevel(uint8_t level)
 	esp_log_level_set("LIDARS", level);
 	esp_log_level_set("rotary_encoder", level);
 	esp_log_level_set("P9813", level);
+	esp_log_level_set("TACHOMETER", level);
+	esp_log_level_set("ANALOG", level);
 }
 
-void mqtt_wait_lan_and_start()
+void wait_lan()
 {
 	while (me_state.LAN_init_res != ESP_OK)
 	{
 		vTaskDelay(pdMS_TO_TICKS(100));
 	}
-	ESP_LOGI(TAG, "network inited, start mqtt");
-	mqtt_app_start();
+
+	if(me_config.MDNS_enable){
+		mdns_start();
+	}
+	if(me_config.FTP_enable){
+		//TO-DO speed up needed
+		xTaskCreatePinnedToCore(ftp_task, "FTP", 1024 * 10, NULL, configMAX_PRIORITIES - 5, NULL, 0);
+	}
+	if (strlen(me_config.mqttBrokerAdress) > 3)	{
+		mqtt_app_start();
+	}
 	vTaskDelete(NULL);
-}
-// void default_app_main(void) {
-//
-//	relayGPIO_init();
-//
-//	//spiffs_init();
-//	nvs_init();
-//
-//	ESP_LOGI(TAG, "try init sdCard");
-//	//if (sd_card_init() != ESP_OK) {
-//
-// }
-
-void let_dd_task()
-{
-	init_p9813(0, 8);
-	int color[8][3] = {
-		{250, 250, 250},
-		{250, 250, 250},
-		{250, 250, 250},
-		{250, 250, 250},
-		{250, 250, 250},
-		{250, 0, 0},
-		{250, 250, 250},
-		{250, 250, 250}};
-	int increment = 10;
-	uint8_t seg_led_target;
-	int16_t led_mass[8][3];
-	for (int i = 0; i < 8; i++){
-		led_mass[i][0] = 0;
-		led_mass[i][1] = 0;
-		led_mass[i][2] = 0;
-	}
-
-	// for (int i = 0; i < 8; i++){
-	// 	p9813_set_led_color(i, 255, 255, 255);
-	// }
-	// p9813_write_led();
-	// vTaskDelay(pdMS_TO_TICKS(2500));
-	// for (int i = 0; i < 8; i++){
-	// 	p9813_set_led_color(i, 0, 0, 0);
-	// }
-	// p9813_write_led();
-
-
-	while (1){
-		for (int i = 0; i < 8; i++){
-			for (int y = 0; y < 3; y++){
-				if (i == led_segment){
-					if (led_mass[i][y] < color[i][y]){
-						led_mass[i][y] += increment;
-						if(led_mass[i][y]>color[i][y]){
-							led_mass[i][y]=color[i][y];
-						}
-					}
-				}
-				else{
-					if (led_mass[i][y] > 0)	{
-						led_mass[i][y] -= increment;
-						if(led_mass[i][y]<0){
-							led_mass[i][y]=0;
-						}
-					}
-				}
-			}
-			p9813_set_led_color(i, led_mass[i][0], led_mass[i][1], led_mass[i][2]);
-			//printf("%d---%d:%d:%d\n", i, led_mass[i][0], led_mass[i][1], led_mass[i][2]);
-		}
-		// p9813_set_led_color(prev_led_segment,0,0,0);
-		// p9813_set_led_color(led_segment,0,255,0);
-		p9813_write_led();
-		// if (led_segment != prev_led_segment)
-		// {
-		// 	prev_led_segment = led_segment;
-		// }
-
-		vTaskDelay(pdMS_TO_TICKS(25));
-	}
 }
 
 void app_main(void)
@@ -378,7 +292,6 @@ void app_main(void)
 
 	xTaskCreateStatic(usb_device_task, "usbd", USBD_STACK_SIZE, NULL, configMAX_PRIORITIES - 1, usb_device_stack, &usb_device_taskdef);
 	xTaskCreateStatic(cdc_task, "cdc", 1024 * 4, NULL, configMAX_PRIORITIES - 2, cdc_stack, &cdc_taskdef);
-	xTaskCreatePinnedToCore(listenListener, "audio_listener", 1024 * 2, NULL, 1, NULL, 0);
 	xTaskCreate(crosslinker_task, "cross_linker", 1024 * 4, NULL, configMAX_PRIORITIES - 8, NULL);
 	ESP_LOGD(TAG, "CDC task started");
 
@@ -388,79 +301,53 @@ void app_main(void)
 		ESP_LOGE(TAG, "Exec_Mailbox create FAIL");
 	}
 
-	//--test--
-	static wl_handle_t s_wl_handle = WL_INVALID_HANDLE;
-	const char *base_path = "/spiflash";
-	const esp_vfs_fat_mount_config_t mount_config = {
-            .max_files = 4,
-            .format_if_mount_failed = true,
-            .allocation_unit_size = CONFIG_WL_SECTOR_SIZE
-    };
-	esp_err_t err = esp_vfs_fat_spiflash_mount(base_path, "storage", &mount_config, &s_wl_handle);
-    if (err != ESP_OK) {
-        ESP_LOGE(TAG, "Failed to mount FATFS (%s)", esp_err_to_name(err));
-        return;
-    }
-	//--test--
-
-	//me_state.sd_init_res = spisd_init();
-	me_state.sd_init_res = ESP_FAIL;
+	me_state.sd_init_res = spisd_init();
 	if (me_state.sd_init_res != ESP_OK)	{
-		ESP_LOGE(TAG, "spisd_init FAIL");
-		//esp_restart();
-	}else{
-		if (remove("/sdcard/error.txt")){
-			ESP_LOGD(TAG, "/sdcard/error.txt delete failed");
-		}
-		load_Default_Config();
-		scanFileSystem();
-		me_state.config_init_res = loadConfig();
-		if (me_state.config_init_res != ESP_OK)	{
-			char tmpString[40];
-			sprintf(tmpString, "Load config FAIL in line: %d", me_state.config_init_res);
-			writeErrorTxt(tmpString);
-		}
-
-		me_state.slot_init_res = init_slots();
-
-		me_state.content_search_res = loadContent();
-		if (me_state.content_search_res != ESP_OK)	{
-			ESP_LOGD(TAG, "Load Content FAIL");
-			writeErrorTxt("Load content FAIL");
-		}
-
-		if (me_config.LAN_enable == 1)	{
-			LAN_init();
-		}
-
-		if (strlen(me_config.mqttBrokerAdress) > 3)	{
-			xTaskCreate(mqtt_wait_lan_and_start, "mqtt_wait_lan", 1024 * 4, NULL, configMAX_PRIORITIES - 8, NULL);
+		ESP_LOGE(TAG, "sdcard_init FAIL");
+		const char *base_path = "/sdcard";
+		const esp_vfs_fat_mount_config_t mount_config = {
+				.max_files = 4,
+				.format_if_mount_failed = true,
+				.allocation_unit_size = CONFIG_WL_SECTOR_SIZE
+		};
+		esp_err_t err = esp_vfs_fat_spiflash_mount(base_path, "storage", &mount_config, &s_wl_handle);
+		if (err != ESP_OK) {
+			ESP_LOGE(TAG, "Failed to mount FATFS (%s)", esp_err_to_name(err));
+			return;
 		}
 	}
+	if (remove("/sdcard/error.txt")){
+		ESP_LOGD(TAG, "/sdcard/error.txt delete failed");
+	}
+	load_Default_Config();
+	scanFileSystem();
+	me_state.config_init_res = loadConfig();
+	if (me_state.config_init_res != ESP_OK)	{
+		char tmpString[40];
+		sprintf(tmpString, "Load config FAIL in line: %d", me_state.config_init_res);
+		writeErrorTxt(tmpString);
+	}
+	
+	me_state.slot_init_res = init_slots();
 
-	//	me_slot_config(1, BUTTON_OPTORELAY_MODULE);
-	//	me_slot_config(2, BUTTON_OPTORELAY_MODULE);
-	//	me_slot_config(3, BUTTON_OPTORELAY_MODULE);
+	me_state.content_search_res = loadContent();
+	if (me_state.content_search_res != ESP_OK)	{
+		ESP_LOGD(TAG, "Load Content FAIL");
+		writeErrorTxt("Load content FAIL");
+	}
 
-	//	for(int i=0; i<me_state.triggers_topic_list_index; i++){
-	//		printf("trigger:%s \n", me_state.triggers_topic_list[i]);
-	//	}
-	//	for(int i=0; i<me_state.action_topic_list_index; i++){
-	//		printf("action:%s \n", me_state.action_topic_list[i]);
-	//	}
-	//
-	//	execute("monofon_1/optorelay_1:1");
-	//	xTaskCreatePinnedToCore(playerTask, "player", 1024 * 8, NULL, 1, NULL, 0);
-	//	vTaskDelay(pdMS_TO_TICKS(100));
-	//	xTaskCreatePinnedToCore(sensTask, "sens", 1024 * 4, NULL, 24, NULL, 1);
-	// execute("monofon_1/play_track:0");
-	// console_init();
-	//
-	//start_encoder_inc_task(2);
-	//xTaskCreate(let_dd_task, "let_dd_task", 1024 * 4, NULL, configMAX_PRIORITIES - 8, NULL);
+	if (me_config.LAN_enable == 1)	{
+		LAN_init();
+		xTaskCreate(wait_lan, "wait_lan", 1024 * 4, NULL, configMAX_PRIORITIES - 8, NULL);
+		vTaskDelay(pdMS_TO_TICKS(1000));
+	}
 
+	
+	
 	vTaskDelay(pdMS_TO_TICKS(100));
 	ESP_LOGI(TAG, "Ver %s. Load complite, start working. free Heap size %d", VERSION, xPortGetFreeHeapSize());
+
+	
 
 	while (1)
 	{
@@ -472,18 +359,20 @@ void app_main(void)
 			execute(exec_message.str);
 		}
 
-		if(xTaskGetTickCount()>5000000){
-			esp_restart();
-		}
+		vTaskDelay(pdMS_TO_TICKS(10));
+		//ESP_LOGD(TAG, "esp timer:%llu", esp_timer_get_time());
+		// if(xTaskGetTickCount()>5000000){
+		// 	esp_restart();
+		// }
 
-		if(flag_ccw){
-		flag_ccw=0;
-		ESP_LOGD(TAG, "ccw");
-	}
-	if(flag_cw){
-		flag_cw=0;
-		ESP_LOGD(TAG, "cw");
-	}
+		// if(flag_ccw){
+		// flag_ccw=0;
+		// ESP_LOGD(TAG, "ccw");
+	//}
+	// if(flag_cw){
+	// 	flag_cw=0;
+	// 	ESP_LOGD(TAG, "cw");
+	// }
 	}
 
 	

@@ -189,34 +189,37 @@ void exec_led(int slot_num, int payload) {
 }
 
 void execute(char *action) {
-ESP_LOGD(TAG, "Execute action:%s", action);
-char source[strlen(action)];
-strcpy(source, action);
-char *rest;
-char *tok = source + strlen(me_config.device_name) + 1;
-if (strstr(tok, ":") == NULL) {
-	ESP_LOGW(TAG, "Action wrong format: %s", action);
-	return;
-}
-tok = strtok_r(tok, ":", &rest);
+	ESP_LOGD(TAG, "Execute action:%s", action);
+	char source[strlen(action)];
+	strcpy(source, action);
+	char *rest;
+	char *tok = source + strlen(me_config.device_name) + 1;
+	if (strstr(tok, ":") == NULL) {
+		//ESP_LOGW(TAG, "Action short format: %s", action);
+		//return;
+	}else{
+		tok = strtok_r(tok, ":", &rest);
+	}
 
-if (strcmp(tok, "play_track") == 0) {
-	audioPlay(rest);
-} else if (strcmp(tok, "player_stop") == 0) {
-	audioStop();
-} else if (strcmp(tok, "player_pause") == 0) {
-	audioPause();
-} else if (strcmp(tok, "set_volume") == 0) {
-	setVolume_str(rest);
-} else {
+	if (strcmp(tok, "player_play") == 0) {
+		audioPlay(rest);
+	} else if (strcmp(tok, "player_shift") == 0) {
+		audioShift(rest);
+	}else if (strcmp(tok, "player_stop") == 0) {
+		audioStop();
+	} else if (strcmp(tok, "player_pause") == 0) {
+		audioPause();
+	} else if (strcmp(tok, "player_volume") == 0) {
+		setVolume_str(rest);
+	} else {
 	char *payload = rest;
 //ESP_LOGD(TAG,"tok:%s",tok);
 	// if (strstr(tok, "_") == NULL) {
 	// 	ESP_LOGW(TAG, "Unknown action or wrong format: %s", action);
 	// 	return;
 	// }
-	//char *type = strtok_r(tok, "_", &rest);
-	char *type = tok;
+	char *type = strtok_r(tok, "_", &rest);
+	//char *type = tok;
 //ESP_LOGD(TAG,"rest:%s",rest);
 	int slot_num = atoi(rest);
 	if (strcmp(type, "optorelay") == 0) {
@@ -230,11 +233,8 @@ if (strcmp(tok, "play_track") == 0) {
 	} else if (strcmp(type, "glitch") == 0) {
 		setGlitch(slot_num, payload);
 	} else {
-		ESP_LOGW(TAG, "Unknown action type: %s", action);
+		ESP_LOGW(TAG, "Unknown action type: %s", type);
 	}
 }
 
-//printf("type:%s stot_num:%d payload:%d \n", type, slot_num, payload);
-
-//strtok_r(topic_no_devName, "\n", &rest);
 }

@@ -48,7 +48,13 @@
         "random": "c",
         "portmacro.h": "c",
         "mcpwm.h": "c",
-        "diskio.h": "c"
+        "diskio.h": "c",
+        "sdcard_scan.h": "c",
+        "queue.h": "c",
+        "typeinfo": "c",
+        "stdio.h": "c",
+        "string.h": "c",
+        "esp_heap_caps.h": "c"
     },
-    "idf.portWin": "COM46"
+    "idf.portWin": "COM43"
 }

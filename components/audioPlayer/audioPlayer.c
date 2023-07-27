@@ -65,23 +65,30 @@ void audioInit(void) {
 	}
 
 	if (strstr(me_config.slot_options[0], "delay")!=NULL){
-			char *ind_of_del = strstr(me_config.slot_options[0], "delay");
-			char options_copy[strlen(ind_of_del)];
-			strcpy(options_copy, ind_of_del);
-			char *rest;
-			char *ind_of_eqal=strstr(ind_of_del, ":");
-			if(ind_of_eqal!=NULL){
-				if(strstr(ind_of_del, ",")!=NULL){
-					ind_of_del = strtok_r(options_copy,",",&rest);
-				}
-				me_config.play_delay = atoi(ind_of_eqal+1);
-				ESP_LOGD(TAG, "Set play_delay:%d", me_config.play_delay);
-			}else{
-				ESP_LOGW(TAG, "Play_delay options wrong format:%s", ind_of_del);
+		char *ind_of_del = strstr(me_config.slot_options[0], "delay");
+		char options_copy[strlen(ind_of_del)];
+		strcpy(options_copy, ind_of_del);
+		char *rest;
+		char *ind_of_eqal=strstr(ind_of_del, ":");
+		if(ind_of_eqal!=NULL){
+			if(strstr(ind_of_del, ",")!=NULL){
+				ind_of_del = strtok_r(options_copy,",",&rest);
 			}
+			me_config.play_delay = atoi(ind_of_eqal+1);
+			ESP_LOGD(TAG, "Set play_delay:%d", me_config.play_delay);
 		}else{
-			me_config.play_delay=0;
+			ESP_LOGW(TAG, "Play_delay options wrong format:%s", ind_of_del);
 		}
+	}else{
+		me_config.play_delay=0;
+	}
+
+	if (strstr(me_config.slot_options[0], "loop")!=NULL){
+		me_config.loop=1;
+		ESP_LOGD(TAG, "Set loop mode");
+	}else{
+		me_config.loop=0;
+	}
 
 
 	board_handle = audio_board_init();
@@ -131,10 +138,12 @@ void audioInit(void) {
 
 	//ESP_LOGD(TAG, "Set up  event listener");
 	audio_event_iface_cfg_t evt_cfg = AUDIO_EVENT_IFACE_DEFAULT_CFG();
-	evt_cfg.external_queue_size = 5;
-	evt_cfg.internal_queue_size = 5;
-	evt_cfg.queue_set_size = 5;
+	evt_cfg.external_queue_size = 10;//5
+	evt_cfg.internal_queue_size = 10;//5
+	evt_cfg.queue_set_size = 10;//5
 	evt = audio_event_iface_init(&evt_cfg);
+
+	xTaskCreatePinnedToCore(listenListener, "audio_listener", 1024 * 4, NULL, 1, NULL, 0);
 
 	audio_pipeline_set_listener(pipeline, evt);
 
@@ -180,7 +189,9 @@ void audioPlay(char *cmd) {
 			me_state.currentTrack = 0;
 		}
 		ESP_LOGD(TAG, "Current track index decrement: %d", me_state.currentTrack);
-	} else if (strstr(cmd, "random")!=NULL) {
+	} else if (cmd[0] == 35) {
+		ESP_LOGD(TAG, "Play current truck:%d", me_state.currentTrack);
+	}else if (strstr(cmd, "random")!=NULL) {
 		me_state.currentTrack = rand() % me_state.numOfTrack;
 		ESP_LOGD(TAG, "Set random track index: %d", me_state.currentTrack);
 	}else if (strstr(cmd, "current")!=NULL) {
@@ -220,6 +231,40 @@ void audioPlay(char *cmd) {
 	audio_pipeline_run(pipeline);
 
 	ESP_LOGD(TAG, "Start playing file:%s Heap usage:%d, Free heap:%d", me_config.soundTracks[me_state.currentTrack], heapBefore - xPortGetFreeHeapSize(), xPortGetFreeHeapSize());
+	
+	vTaskDelay(pdMS_TO_TICKS(10));
+	char tmpStr[strlen(me_config.device_name)+strlen("/player_start")+10];
+	sprintf(tmpStr,"%s/player_start:%d", me_config.device_name, me_state.currentTrack);
+	report(tmpStr);
+}
+
+void audioShift(char *cmd){
+	if (cmd[0] == 43) {
+		me_state.currentTrack += atoi(cmd + 1);
+		if (me_state.currentTrack >= me_state.numOfTrack) {
+			me_state.currentTrack = 0;
+		}
+		ESP_LOGD(TAG, "Shift track. Current track index increment: %d", me_state.currentTrack);
+	} else if (cmd[0] == 45) {
+		me_state.currentTrack -= atoi(cmd + 1);
+		if (me_state.currentTrack >= me_state.numOfTrack) {
+			me_state.currentTrack = 0;
+		}
+		ESP_LOGD(TAG, "Shift track. Current track index decrement: %d", me_state.currentTrack);
+	}else if (strstr(cmd, "random")!=NULL) {
+		me_state.currentTrack = rand() % me_state.numOfTrack;
+		ESP_LOGD(TAG, "Shift track. Set random track index: %d", me_state.currentTrack);
+	}else {
+		me_state.currentTrack = atoi(cmd);
+		if (me_state.currentTrack >= me_state.numOfTrack) {
+			me_state.currentTrack = 0;
+		}
+		ESP_LOGD(TAG, "Shift track. Current track index: %d of: %d ", me_state.currentTrack,me_state.numOfTrack);
+	}
+
+	if(audio_element_get_state(i2s_stream_writer)==AEL_STATE_RUNNING){
+		audioPlay("#");
+	}
 }
 
 void audioStop(void) {
@@ -250,34 +295,24 @@ void audioPause(void) {
 
 void listenListener(void *pvParameters) {
 	while (1) {
-		vTaskDelay(pdMS_TO_TICKS(10));
+		
 
 		audio_event_iface_msg_t msg;
 		esp_err_t ret = audio_event_iface_listen(evt, &msg, portMAX_DELAY);
 		if (msg.cmd == AEL_MSG_CMD_REPORT_STATUS) {
 			audio_element_state_t el_state = audio_element_get_state(i2s_stream_writer);
 			if (el_state == AEL_STATE_FINISHED) {
-				ESP_LOGD(TAG, "audio_event: AEL_STATE_FINISHED");
 				audioStop();
-				char tmpStr[strlen(me_config.device_name)+strlen("/player_stop")+1];
-				sprintf(tmpStr,"%s/player_stop:1", me_config.device_name);
+				
+				vTaskDelay(pdMS_TO_TICKS(10));
+
+				char tmpStr[strlen(me_config.device_name)+strlen("/player_end")+10];
+				sprintf(tmpStr,"%s/player_end:%d", me_config.device_name, me_state.currentTrack);
 				report(tmpStr);
-//				if (me_config.trackEnd_action == 1) {	//loop
-//					ESP_LOGD(TAG, "Loop track");
-//					audioStop();
-//					audioPlay();
-//				} else if ((me_config.trackEnd_action == 2) && (me_state.changeTrack != 1)) {	//next
-//					ESP_LOGD(TAG, "Next track");
-//					me_state.changeTrack = 1;
-//				}
+				
 			}
 		}
 
-//		if(ret!=ESP_OK){
-//			ESP_LOGD(TAG, "audio_event_iface_listen FAIL: %d", ret);
-//		}else{
-//			ESP_LOGD(TAG, "audio_event_iface_listen source_type: %d  msg_cmd:%d ", msg.source_type, msg.cmd);
-//		}
 	}
 
 }

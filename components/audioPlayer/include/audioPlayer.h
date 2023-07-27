@@ -8,3 +8,4 @@ void setVolume_str(char *cmd);
 void listenListener(void *pvParameters);
 void audioDeinit(void);
 void fatFs_init(void);
+void audioShift(char *cmd);

@@ -29,10 +29,20 @@
 #include "sd_card.h"
 #include "stdbool.h"
 #include "esp_log.h"
+#include "wear_levelling.h"
+#include "ff.h"
+#include "diskio.h"
+#include "diskio_wl.h"
+#include "stateConfig.h"
 
 #define true 1
 #define false 0
 //#define NULL 0
+
+extern configuration me_config;
+extern stateStruct me_state;
+extern wl_handle_t s_wl_handle;
+uint8_t s_pdrv;
 
 static const char *TAG = "MSD";
 
@@ -74,8 +84,18 @@ void tud_msc_capacity_cb(uint8_t lun, uint32_t* block_count, uint16_t* block_siz
   FLAG_PC_AVAILEBLE = 1;
   FLAG_PC_EJECT=0;
 
-  *block_count = spisd_get_sector_num();
-  *block_size  = spisd_get_sector_size();
+  //*block_count = spisd_get_sector_num();
+  //*block_size  = spisd_get_sector_size();
+  // *block_size = wl_sector_size(s_wl_handle);
+  // *block_count = (wl_size(s_wl_handle))/wl_sector_size(s_wl_handle);
+  if(me_state.sd_init_res!=ESP_OK){
+    disk_ioctl(s_pdrv, GET_SECTOR_COUNT, block_count);
+    disk_ioctl(s_pdrv, GET_SECTOR_SIZE, block_size);
+    ESP_LOGD(__func__, "GET_SECTOR_COUNT = %d，GET_SECTOR_SIZE = %d", *block_count, *block_size);
+  }else{
+    *block_count = spisd_get_sector_num();
+    *block_size  = spisd_get_sector_size();
+  }
 }
 
 // Invoked when received Start Stop Unit command
@@ -90,6 +110,9 @@ bool tud_msc_start_stop_cb(uint8_t lun, uint8_t power_condition, bool start, boo
   {
     if (start)
     {
+      if(me_state.sd_init_res!=ESP_OK){
+        s_pdrv = ff_diskio_get_pdrv_wl(s_wl_handle);
+      }
     }
     else
     {
@@ -112,10 +135,17 @@ int32_t tud_msc_read10_cb(uint8_t lun, uint32_t lba, uint32_t offset, void* buff
 
     if (!offset)
     {
-        if (spisd_sectors_read(buffer, lba, bufsize / spisd_get_sector_size()) > 0)
-        {
+      if(me_state.sd_init_res!=ESP_OK){
+        const uint32_t block_count = bufsize / wl_sector_size(s_wl_handle);
+        if (disk_read(s_pdrv,buffer,lba,block_count)==ESP_OK){
           result = bufsize;
         }
+      }else{
+        if (spisd_sectors_read(buffer, lba, bufsize / spisd_get_sector_size()) > 0){
+          result = bufsize;
+        }
+      }
+
     }
     
     return result;
@@ -131,10 +161,17 @@ int32_t tud_msc_write10_cb(uint8_t lun, uint32_t lba, uint32_t offset, uint8_t* 
 
     if (!offset)
     {
+      if(me_state.sd_init_res!=ESP_OK){
+        const uint32_t block_count = bufsize / wl_sector_size(s_wl_handle);
+        if (disk_write(s_pdrv,buffer,lba,block_count)==ESP_OK){
+          result = bufsize;
+        }
+      }else{
         if (spisd_sectors_write(buffer, lba, bufsize / spisd_get_sector_size()) > 0)
         {
           result = bufsize;
         }
+      }
     }
 
   return bufsize;

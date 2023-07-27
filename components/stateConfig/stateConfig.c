@@ -44,6 +44,14 @@ static int handler(void *user, const char *section, const char *name, const char
 		pconfig->gateWay = strdup(value);
 	} else if (MATCH("LAN", "DHCP")) {
 		pconfig->DHCP = atoi(value);
+	} else if (MATCH("MDNS", "MDNS_enable")) {
+		pconfig->MDNS_enable = atoi(value);
+	} else if (MATCH("FTP", "FTP_enable")) {
+		pconfig->FTP_enable = atoi(value);
+	} else if (MATCH("FTP", "FTP_login")) {
+		pconfig->FTP_login = strdup(value);
+	} else if (MATCH("FTP", "FTP_pass")) {
+		pconfig->FTP_pass = strdup(value);
 	} else if (MATCH("UDP", "udpServerAdress")) {
 		pconfig->udpServerAdress = strdup(value);
 	} else if (MATCH("UDP", "udpServerPort")) {
@@ -126,6 +134,9 @@ void load_Default_Config(void) {
 	me_config.netMask = strdup("255.255.255.0");
 	me_config.gateWay = strdup("192.168.88.1");
 
+	me_config.MDNS_enable=0;
+
+	me_config.FTP_login = 0;
 	me_config.FTP_login = strdup("user");
 	me_config.FTP_pass = strdup("pass");
 
@@ -247,12 +258,24 @@ int saveConfig(void) {
 	sprintf(tmp, "gateWay = %s \r\n", me_config.gateWay);
 	fprintf(configFile, tmp);
 	memset(tmp, 0, strlen(tmp));
-//	sprintf(tmp, "FTP_login = %s \r\n", me_config.FTP_login);
-//	fprintf(configFile, tmp);
-//	memset(tmp, 0, strlen(tmp));
-//	sprintf(tmp, "FTP_pass = %s \r\n", me_config.FTP_pass);
-//	fprintf(configFile, tmp);
-//	memset(tmp, 0, strlen(tmp));
+	sprintf(tmp, "\r\n[MDNS] \r\n");
+	fprintf(configFile, tmp);
+	memset(tmp, 0, strlen(tmp));
+	sprintf(tmp, "MDNS_enable = %d \r\n", me_config.MDNS_enable);
+	fprintf(configFile, tmp);
+	memset(tmp, 0, strlen(tmp));
+	sprintf(tmp, "\r\n[FTP] \r\n");
+	fprintf(configFile, tmp);
+	memset(tmp, 0, strlen(tmp));
+	sprintf(tmp, "FTP_enable  = %d \r\n", me_config.FTP_enable);
+	fprintf(configFile, tmp);
+	memset(tmp, 0, strlen(tmp));
+	sprintf(tmp, "FTP_login = %s \r\n", me_config.FTP_login);
+	fprintf(configFile, tmp);
+	memset(tmp, 0, strlen(tmp));
+	sprintf(tmp, "FTP_pass = %s \r\n", me_config.FTP_pass);
+	fprintf(configFile, tmp);
+	memset(tmp, 0, strlen(tmp));
 	sprintf(tmp, "\r\n[UDP] \r\n");
 	fprintf(configFile, tmp);
 	memset(tmp, 0, strlen(tmp));

@@ -192,101 +192,22 @@ static void _isr_rotenc(void * args)
     default:
         break;
     }
-
-
-    int64_t out_pos=0;
-    // if(info->offset>0){
-        //sprintf(debugString, "before:%d offset:%d",info->state.position, info->offset);
-        out_pos = info->state.position - info->offset;
-        
-    // }else{
-    //     out_pos = info->state.position;
-        info->zero_sens_state = gpio_get_level(info->zero_sens_pin);
-        if(info->zero_sens_state!=info->zero_sens_prev_state){
-            //printf("sensor/n");
-            if ((info->zero_sens_state == 1) && (info->zero_sens_prev_state == 0)){
-                if(info->state.direction==ROTARY_ENCODER_DIRECTION_CLOCKWISE){
-                    //info->state.sensor_begin = info->state.position;
-                    info->state.position = 0;
-                    flag_cw=1;
-                    //printf("cw/n");
-                }else if(info->state.direction==ROTARY_ENCODER_DIRECTION_COUNTER_CLOCKWISE){
-                    //info->state.sensor_end = info->state.position;
-                }
-                //printf("sensor/n");
-                //ESP_LOGI(TAG, "Set sensor_begin:%d", info->sensor_begin);
-            }
-            else if ((info->zero_sens_state == 0) && (info->zero_sens_prev_state == 1))
-            {
-                if(info->state.direction==ROTARY_ENCODER_DIRECTION_COUNTER_CLOCKWISE){
-                    //info->state.sensor_begin = info->state.position;
-                    info->state.position = 0;
-                    flag_ccw=1;
-                    //printf("ccw/n");
-
-                }else if(info->state.direction==ROTARY_ENCODER_DIRECTION_CLOCKWISE){
-                    //info->state.sensor_end = info->state.position;
-                }
-                //ESP_LOGI(TAG, "Set sensor_end:%d", info->sensor_end);
-            }
-
-            if ((info->state.sensor_begin > 0) && (info->state.sensor_end > 0))
-            {
-                info->state.sensor_length = abs(info->state.sensor_end - info->state.sensor_begin);
-                info->offset = info->state.sensor_begin;
-                //sprintf(debugString, "beg^%d end:%d offset:%d",info->state.sensor_begin ,info->state.sensor_end, info->offset);
-                //ESP_LOGI(TAG, "Set zero sensor length:%d", info->sensor_length);
-            }
-            info->zero_sens_prev_state = info->zero_sens_state;
-        }
-    //}
-
-    if(out_pos>=0){
-        while(out_pos>info->state.disk_length){
-            out_pos-=info->state.disk_length;
-        }
-    }else{
-        while(out_pos<0){
-            out_pos+=info->state.disk_length;
-        }
-    }
-
-    
-
-    if (send_event && info->queue)
-    {
-        rotary_encoder_event_t queue_event =
-        {
-            .state =
-            {
-                .position = out_pos,
-                .direction = info->state.direction,
-            },
-        };
-        BaseType_t task_woken = pdFALSE;
-        xQueueOverwriteFromISR(info->queue, &queue_event, &task_woken);
-        if (task_woken)
-        {
-            portYIELD_FROM_ISR();
-        }
-    }
 }
 
-esp_err_t rotary_encoder_init(rotary_encoder_info_t * info, gpio_num_t pin_a, gpio_num_t pin_b, gpio_num_t zero_sens_pin)
+esp_err_t rotary_encoder_init(rotary_encoder_info_t * info, gpio_num_t pin_a, gpio_num_t pin_b)
 {
     esp_err_t err = ESP_OK;
     if (info)
     {
         info->pin_a = pin_a;
         info->pin_b = pin_b;
-        info->zero_sens_pin = zero_sens_pin;
         info->table = &_ttable_full[0];   //enable_half_step ? &_ttable_half[0] : &_ttable_full[0];
         info->table_state = R_START;
         info->state.position = 0;
         info->state.direction = ROTARY_ENCODER_DIRECTION_NOT_SET;
         info->state.sensor_begin = -1;
         info->state.sensor_end = -1;
-        info->offset=-1;
+
 
 
         // configure GPIOs
@@ -304,11 +225,6 @@ esp_err_t rotary_encoder_init(rotary_encoder_info_t * info, gpio_num_t pin_a, gp
         gpio_isr_handler_add(info->pin_a, _isr_rotenc, info);
         gpio_isr_handler_add(info->pin_b, _isr_rotenc, info);
 
-        gpio_reset_pin(info->zero_sens_pin);
-	    gpio_set_direction(info->zero_sens_pin, GPIO_MODE_INPUT);
-        info->zero_sens_prev_state=gpio_get_level(info->zero_sens_pin);
-
-        info->state.disk_length=1638; //TO DO remove this kolhoz
     }
     else
     {

@@ -70,7 +70,7 @@ void start_button_task(int num_of_slot){
 	int t_slot_num = num_of_slot;
 	char tmpString[60];
 	sprintf(tmpString, "task_button_%d", num_of_slot);
-	xTaskCreate(button_task, tmpString, 1024*2, &t_slot_num,12, NULL);
+	xTaskCreate(button_task, tmpString, 1024*4, &t_slot_num,12, NULL);
 
 	char *str = calloc(strlen(me_config.device_name)+10, sizeof(char));
 	sprintf(str, "%s/button_%d",me_config.device_name, num_of_slot);

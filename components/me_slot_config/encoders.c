@@ -230,164 +230,80 @@ void encoder_inc_task(void *arg)
 	int num_of_slot = *(int *)arg;
 	uint8_t a_pin_num = SLOTS_PIN_MAP[num_of_slot][0];
 	uint8_t b_pin_num = SLOTS_PIN_MAP[num_of_slot][1];
-	uint8_t zero_sens_pin = SLOTS_PIN_MAP[1][0];
-	// ESP_ERROR_CHECK(gpio_install_isr_service(0));
+
 	gpio_install_isr_service(0);
 	rotary_encoder_info_t info = {0};
-	ESP_ERROR_CHECK(rotary_encoder_init(&info, a_pin_num, b_pin_num, zero_sens_pin));
-	//ESP_ERROR_CHECK(rotary_encoder_enable_half_steps(&info, 1));
-	QueueHandle_t event_queue = rotary_encoder_create_queue();
-	ESP_ERROR_CHECK(rotary_encoder_set_queue(&info, event_queue));
 
-	// int16_t zero_sens_slot = -1;
-	// //int8_t zero_sens_pin = -1;
-	// uint8_t zero_sens_state, zero_sens_prev_state = gpio_get_level(zero_sens_pin);
-	// int16_t disk_length = 2000;
-	// int16_t sensor_length = -1;
-	// int16_t sensor_begin = -1, sensor_end = -1;
-	// int16_t offset = -1;
-	int16_t pos, prev_pos=0;
-	// if (strstr(me_config.slot_options[num_of_slot], "zero_sens_slot") != NULL)
-	// {
-	// 	zero_sens_slot = get_option_int_val(num_of_slot, "zero_sens_slot");
-	// 	if (zero_sens_slot < 0)
-	// 	{
-	// 		ESP_LOGD(TAG, "Encoder zero_sens_slot wrong format");
-	// 	}
-	// 	else
-	// 	{
-	// 		ESP_LOGD(TAG, "Encoder set zero_sens_slot:%d for slot:%d", zero_sens_slot, num_of_slot);
-	// 	}
-	// 	zero_sens_pin = SLOTS_PIN_MAP[zero_sens_slot][0];
-	// 	gpio_reset_pin(zero_sens_pin);
-	// 	gpio_set_direction(zero_sens_pin, GPIO_MODE_INPUT);
-	// }
+	uint8_t inverse  = 0;
+	if (strstr(me_config.slot_options[num_of_slot], "inverse")!=NULL){
+		inverse=1;
+	}
+	if(inverse){
+		ESP_ERROR_CHECK(rotary_encoder_init(&info, b_pin_num, a_pin_num));
+	}else{
+		ESP_ERROR_CHECK(rotary_encoder_init(&info, a_pin_num, b_pin_num));
+	}
 
+	uint8_t absolute  = 0;
+	if (strstr(me_config.slot_options[num_of_slot], "absolute")!=NULL){
+		absolute=1;
+	}
 	
-	// gpio_reset_pin(zero_sens_pin);
-	// gpio_set_direction(zero_sens_pin, GPIO_MODE_INPUT);
+	uint8_t flag_custom_topic = 0;
+	char *custom_topic=NULL;
+	if (strstr(me_config.slot_options[num_of_slot], "custom_topic")!=NULL){
+		custom_topic = get_option_string_val(num_of_slot,"custom_topic");
+		ESP_LOGD(TAG, "Custom topic:%s", custom_topic);
+		flag_custom_topic=1;
+	}
+
+    if(flag_custom_topic==0){
+		char *str = calloc(strlen(me_config.device_name)+strlen("/encoder_")+4, sizeof(char));
+		sprintf(str, "%s/encoder_%d",me_config.device_name, num_of_slot);
+		me_state.triggers_topic_list[me_state.triggers_topic_list_index]=str;
+	}else{
+		me_state.triggers_topic_list[me_state.triggers_topic_list_index]=custom_topic;
+	}
+	me_state.triggers_topic_list_index++;
 
 
-	//int16_t flag_disk_length=2;
+	//QueueHandle_t event_queue = rotary_encoder_create_queue();
+	//ESP_ERROR_CHECK(rotary_encoder_set_queue(&info, event_queue));
+
+	int32_t pos, prev_pos=0;
+
 	while (1)
 	{
 		// Wait for incoming events on the event queue.
-		
-		rotary_encoder_event_t event = {0};
-		if (xQueueReceive(event_queue, &event, 10 / portTICK_PERIOD_MS) == pdTRUE)
-		{	
-			//ESP_LOGI(TAG, "Event: position %d, direction %s", event.state.position, event.state.direction ? (event.state.direction == ROTARY_ENCODER_DIRECTION_CLOCKWISE ? "CW" : "CCW") : "NOT_SET");
-			
-			pos = (event.state.position*(0.22));
-			led_segment = event.state.position/205+1;
-			if(led_segment>=8){
-				led_segment=0;
+		pos = info.state.position;
+
+		int str_len;
+		char *str;
+		if(pos!=prev_pos){
+			//ESP_LOGD(TAG, "Position %d %s",event.state.position, debugString);
+			//ESP_LOGD(TAG, "report pos:%d",  pos);
+			if(flag_custom_topic){
+				str_len=strlen(custom_topic)+4;
+				str = (char*)malloc(str_len * sizeof(char));
+				if(absolute){
+                    sprintf(str,"%s:%d", custom_topic, pos);
+                }else{
+                    sprintf(str,"%s:%d", custom_topic,  prev_pos - pos);
+                }
+			}else{
+				str_len=strlen(me_config.device_name)+strlen("/encoder_")+8;
+				str = (char*)malloc(str_len * sizeof(char));
+				if(absolute){
+					sprintf(str,"%s/encoder_%d:%d", me_config.device_name, 0, pos);
+				}else{
+					sprintf(str,"%s/encoder_%d:%d", me_config.device_name, 0, prev_pos - pos);
+				}
 			}
-			if(pos!=prev_pos){
-				//ESP_LOGD(TAG, "Position %d %s",event.state.position, debugString);
-				//ESP_LOGD(TAG, "report pos:%d",  pos);
-				int str_len=strlen(me_config.device_name)+strlen("/encoder_")+8;
-				char *str = (char*)malloc(str_len * sizeof(char));
-				sprintf(str,"%s/encoder_%d:%d", me_config.device_name, 0, pos);
-				report(str);
-				free(str);
-			}
-			// if(flag_disk_length<2){
-			// 	//calc disk length
-			// 	zero_sens_state = gpio_get_level(zero_sens_pin);
-			// 	//ESP_LOGI(TAG, "zero_sens_state:%d",  zero_sens_state);
-			// 	if (zero_sens_state != zero_sens_prev_state){
-			// 		if ((zero_sens_state == 1) && (zero_sens_prev_state == 0)){
-			// 			if(flag_disk_length==0){
-			// 				disk_length=pos;
-			// 				flag_disk_length=1;
-			// 				ESP_LOGI(TAG, "Start calck disk_length:%d flag:%d", disk_length, flag_disk_length);
-			// 			}else if((flag_disk_length==1)){
-			// 				disk_length=abs(pos-disk_length);
-			// 				ESP_LOGI(TAG, "Set disk_length:%d", disk_length);
-			// 				flag_disk_length=2;
-			// 			}
-			// 		}
-			// 		zero_sens_prev_state = zero_sens_state;
-			// 	}
-			// }else{
-			// 	//pos to positive val
-			// 	if(pos>=0){
-			// 		while(pos>disk_length){
-			// 			pos-=disk_length;
-			// 		}
-			// 	}else{
-			// 		while(pos<0){
-			// 			pos+=disk_length;
-			// 		}
-			// 	}
-
-			// 	zero_sens_state = gpio_get_level(zero_sens_pin);
-			// 	//ESP_LOGI(TAG, "zero_sens_state:%d",  zero_sens_state);
-			// 	if (zero_sens_state != zero_sens_prev_state)
-			// 	{
-			// 		if ((zero_sens_state == 1) && (zero_sens_prev_state == 0))
-			// 		{
-			// 			sensor_begin = pos;
-			// 			ESP_LOGI(TAG, "Set sensor_begin:%d", sensor_begin);
-			// 		}
-			// 		else if ((zero_sens_state == 0) && (zero_sens_prev_state == 1))
-			// 		{
-			// 			sensor_end = pos;
-			// 			ESP_LOGI(TAG, "Set sensor_end:%d", sensor_end);
-			// 		}
-			// 		if ((sensor_begin > 0) && (sensor_end > 0))
-			// 		{
-			// 			sensor_length = abs(sensor_end - sensor_begin);
-			// 			ESP_LOGI(TAG, "Set zero sensor length:%d", sensor_length);
-			// 		}
-			// 		zero_sens_prev_state = zero_sens_state;
-			// 	}
-
-
-			// }
-
-			
-
-			// // check zero sens
-
-				
-			
+			report(str);
+			free(str);
+			prev_pos = pos;
 		}
-
-
-		// if(pos>=0){
-		// 	while(pos>353){
-		// 		pos-=353;
-		// 	}
-		// }else{
-		// 	while(pos<0){
-		// 		pos+=353;
-		// 	}
-		// }
-		// ESP_LOGI(TAG, "Event: position %d, direction %s", pos,
-		//          event.state.direction ? (event.state.direction == ROTARY_ENCODER_DIRECTION_CLOCKWISE ? "CW" : "CCW") : "NOT_SET");
-		// 	bt_state=gpio_get_level(bt_pin_num);
-
-		// 	int str_len=strlen(me_config.device_name)+strlen("/encoder_")+8;
-		// 	char *str = (char*)malloc(str_len * sizeof(char));
-		// 	sprintf(str,"%s/encoder_%d:%d", me_config.device_name, num_of_slot, (int)(pos*1.0199));
-		// 	report(str);
-		// 	free(str);
-
-		// 	//ESP_LOGI(TAG, "bt_state:%d bt_prev_state:%d", bt_state,bt_prev_state);
-		// 	if (bt_state!=bt_prev_state){
-		// 		if(bt_state==1){
-
-		// 			if(event.state.direction==ROTARY_ENCODER_DIRECTION_CLOCKWISE){
-		// 				offset=event.state.position;
-		// 			}else{
-		// 				offset=event.state.position-10;
-		// 			}
-		// 			ESP_LOGI(TAG, "Lets set ofset:%d", offset );
-		// 		}
-		// 		bt_prev_state = bt_state;
-		// 	}
+		vTaskDelay(pdMS_TO_TICKS(20));
 	}
 }
 

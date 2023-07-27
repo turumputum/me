@@ -6,7 +6,7 @@
 #define INIT_OK 0
 #define INIT_FAIL -1
 
-static const char *VERSION = "1.0";
+static const char* VERSION = "1.0";
 
 typedef enum {
     LED_STATE_DISABLE = 0,
@@ -79,6 +79,7 @@ typedef struct {
 
 	char *device_name;
 
+	uint8_t FTP_enable;
 	char *FTP_login;
 	char *FTP_pass;
 
@@ -90,6 +91,7 @@ typedef struct {
 	uint16_t oscServerPort;
 	uint16_t oscMyPort;
 
+	uint8_t MDNS_enable;
 
 	char *mqttBrokerAdress;
 	char *mqttLogin;
@@ -98,6 +100,7 @@ typedef struct {
 	uint8_t monofonEnable;
 
 	uint16_t play_delay;
+	uint8_t loop;
 	uint8_t volume;
 
 	file_t soundTracks[MAX_NUM_OF_TRACKS];
