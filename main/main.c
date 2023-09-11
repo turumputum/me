@@ -69,8 +69,10 @@
 
 #include "tachometer.h"
 
+#include "TOFs.h"
 
-extern uint8_t SLOTS_PIN_MAP[4][3];
+
+extern uint8_t SLOTS_PIN_MAP[6][4];
 
 extern void board_init(void);
 
@@ -90,6 +92,8 @@ static const char *TAG = "MAIN";
 #define LOG_LOCAL_LEVEL ESP_LOG_DEBUG
 
 #define CONFIG_FREERTOS_HZ 1000
+
+#define CFG_TUSB_DEBUG 3
 
 int FTP_TASK_FINISH_BIT = BIT2;
 EventGroupHandle_t xEventTask;
@@ -249,31 +253,21 @@ void setLogLevel(uint8_t level)
 	esp_log_level_set("3n_MOSFET", level);
 	esp_log_level_set("RFID", level);
 	esp_log_level_set("ENCODERS", level);
-	esp_log_level_set("LIDARS", level);
+	esp_log_level_set("TOFs", level);
 	esp_log_level_set("rotary_encoder", level);
 	esp_log_level_set("P9813", level);
 	esp_log_level_set("TACHOMETER", level);
 	esp_log_level_set("ANALOG", level);
+	esp_log_level_set("PN532", level);
 }
 
-void wait_lan()
-{
-	while (me_state.LAN_init_res != ESP_OK)
-	{
-		vTaskDelay(pdMS_TO_TICKS(100));
-	}
 
-	if(me_config.MDNS_enable){
-		mdns_start();
+
+void heap_report(){
+	while(1){
+		ESP_LOGD(TAG, "free Heap size %d", xPortGetFreeHeapSize());
+		vTaskDelay(pdMS_TO_TICKS(1000));
 	}
-	if(me_config.FTP_enable){
-		//TO-DO speed up needed
-		xTaskCreatePinnedToCore(ftp_task, "FTP", 1024 * 10, NULL, configMAX_PRIORITIES - 5, NULL, 0);
-	}
-	if (strlen(me_config.mqttBrokerAdress) > 3)	{
-		mqtt_app_start();
-	}
-	vTaskDelete(NULL);
 }
 
 void app_main(void)
@@ -293,6 +287,7 @@ void app_main(void)
 	xTaskCreateStatic(usb_device_task, "usbd", USBD_STACK_SIZE, NULL, configMAX_PRIORITIES - 1, usb_device_stack, &usb_device_taskdef);
 	xTaskCreateStatic(cdc_task, "cdc", 1024 * 4, NULL, configMAX_PRIORITIES - 2, cdc_stack, &cdc_taskdef);
 	xTaskCreate(crosslinker_task, "cross_linker", 1024 * 4, NULL, configMAX_PRIORITIES - 8, NULL);
+	//xTaskCreate(heap_report, "heap_report", 1024 * 4, NULL, configMAX_PRIORITIES - 8, NULL);
 	ESP_LOGD(TAG, "CDC task started");
 
 	exec_mailbox = xQueueCreate(10, sizeof(exec_message_t));
@@ -328,18 +323,25 @@ void app_main(void)
 		writeErrorTxt(tmpString);
 	}
 	
-	me_state.slot_init_res = init_slots();
 
-	me_state.content_search_res = loadContent();
-	if (me_state.content_search_res != ESP_OK)	{
-		ESP_LOGD(TAG, "Load Content FAIL");
-		writeErrorTxt("Load content FAIL");
+	me_state.slot_init_res = init_slots();
+	//start_benewakeTOF_task(0);
+
+	//init_rfid_slot(0);
+	
+	if (strstr(me_config.slot_mode[0], "audio_player") != NULL) {
+		me_state.content_search_res = loadContent();
+		if (me_state.content_search_res != ESP_OK)	{
+			ESP_LOGD(TAG, "Load Content FAIL");
+			writeErrorTxt("Load content FAIL");
+		}
+	}else{
+		me_state.content_search_res = ESP_FAIL;
 	}
 
 	if (me_config.LAN_enable == 1)	{
 		LAN_init();
-		xTaskCreate(wait_lan, "wait_lan", 1024 * 4, NULL, configMAX_PRIORITIES - 8, NULL);
-		vTaskDelay(pdMS_TO_TICKS(1000));
+		
 	}
 
 	

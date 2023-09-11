@@ -11,7 +11,7 @@
 
 #include "stateConfig.h"
 
-extern uint8_t SLOTS_PIN_MAP[4][3];
+extern uint8_t SLOTS_PIN_MAP[6][4];
 
 #define LEDC_TIMER              LEDC_TIMER_0
 #define LEDC_MODE               LEDC_LOW_SPEED_MODE

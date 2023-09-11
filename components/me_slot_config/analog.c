@@ -18,7 +18,7 @@
 #include "me_slot_config.h"
 #include "reporter.h"
 
-extern uint8_t SLOTS_PIN_MAP[4][3];
+extern uint8_t SLOTS_PIN_MAP[6][4];
 extern configuration me_config;
 extern stateStruct me_state;
 extern uint8_t led_segment;
@@ -30,6 +30,8 @@ void analog_task(void *arg)
 {
     uint16_t raw_val;
     uint16_t resault=0, prev_resault=0;
+
+	char tmpString[255];
 
     int num_of_slot = *(int *)arg;
 	uint8_t sens_pin_num = SLOTS_PIN_MAP[num_of_slot][0];
@@ -123,30 +125,34 @@ void analog_task(void *arg)
 				f_res = (float)resault/(MAX_VAL-MIN_VAL);
             }
 
+			memset(tmpString, 0, strlen(tmpString));
+
 			if(flag_custom_topic){
-				str_len=strlen(custom_topic)+4;
-				str = (char*)malloc(str_len * sizeof(char));
+
 				if(flag_float_output){
-                    sprintf(str,"%s:%f", custom_topic, f_res);
+                    //sprintf(str,"%s:%f", custom_topic, f_res);
+					sprintf(tmpString,"%s:%f", custom_topic, f_res);
                 }else{
-                    sprintf(str,"%s:%d", custom_topic, resault);
+                    //sprintf(str,"%s:%d", custom_topic, resault);
+					sprintf(tmpString,"%s:%d", custom_topic, resault);
                 }
 			}else{
-				str_len=strlen(me_config.device_name)+strlen("/analog_")+8;
-				str = (char*)malloc(str_len * sizeof(char));
+
                 if(flag_float_output){
-				    sprintf(str,"%s/analog_%d:%f", me_config.device_name, num_of_slot, f_res);
+				    //sprintf(str,"%s/analog_%d:%f", me_config.device_name, num_of_slot, f_res);
+					sprintf(tmpString,"%s/analog_%d:%f", me_config.device_name, num_of_slot, f_res);
                 }else{
-                    sprintf(str,"%s/analog_%d:%d", me_config.device_name, num_of_slot, resault);
+                    //sprintf(str,"%s/analog_%d:%d", me_config.device_name, num_of_slot, resault);
+					sprintf(tmpString,"%s/analog_%d:%d", me_config.device_name, num_of_slot, resault);
                 }
 			}
 
-			report(str);
-			free(str); 
+			report(tmpString);
+			//free(str); 
 
         }
         //ESP_LOGD(TAG, "analog val:%d", resault);
-        vTaskDelay(pdMS_TO_TICKS(20));
+        vTaskDelay(pdMS_TO_TICKS(30));
     }
     
 }

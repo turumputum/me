@@ -19,6 +19,8 @@ static const char *TAG = "REPORTER";
 #define MAILBOX_SIZE 10
 #define MAX_STRING_LENGTH 100
 
+int err;
+
 typedef struct
 {
 	char str[MAX_STRING_LENGTH];
@@ -34,59 +36,6 @@ void reporter_init()
 {
 }
 
-// void cross_linker(char *msg) {
-//	char source[strlen(msg)];
-//	strcpy(source, msg);
-//	char *rest;
-//	char *trigger = source + strlen(me_config.device_name) + 1;
-//	trigger = strtok_r(trigger, ":", &rest);
-//	if (trigger == NULL) {
-//		ESP_LOGD(TAG, "Link event wrong format: %s", msg);
-//		return;
-//	}
-//	int payload = atoi(rest);
-//	char *type = strtok_r(trigger, "_", &rest);
-//	if (type == NULL) {
-//		ESP_LOGD(TAG, "Link event wrong format: %s", msg);
-//		return;
-//	}
-//	int slot_num = atoi(rest);
-//
-//	char crosslinks[strlen(me_config.slot_cross_link[slot_num])];
-//	strcpy(crosslinks, me_config.slot_cross_link[slot_num]);
-//	char *crosslink;
-//	char *croslink_rest = crosslinks;
-//	do {
-//		crosslink = strtok_r(croslink_rest, ",", &croslink_rest);
-//		if (crosslink != NULL) {
-//			ESP_LOGD(TAG, "Cross_link:%s", crosslink);
-//			char *trigger;
-//			char *trigger_rest;
-//			char *action;
-//			char *action_rest;
-//			trigger = strtok_r(crosslink, "=>", &action);
-//			if (trigger == NULL) {
-//				ESP_LOGD(TAG, "Link wrong format: %s", crosslink);
-//				return;
-//			}
-//			trigger = strtok_r(trigger, ":", &trigger_rest);
-//			if (trigger == NULL) {
-//				ESP_LOGD(TAG, "Link wrong format: %s", crosslink);
-//				return;
-//			}
-//			int trigger_val = atoi(trigger_rest);
-//			action = strtok_r(action, ":", &action_rest);
-//			if (action == NULL) {
-//				ESP_LOGD(TAG, "Link wrong format: %s", crosslink);
-//				return;
-//			}
-//			int action_val = atoi(action_rest);
-//
-//			ESP_LOGD(TAG, "Parse res: trigger=%s::%d, action=%s::%d", trigger,
-//					trigger_val, action, action_val);
-//		}
-//	} while (crosslink != NULL);
-// }
 
 void crosslinker_task(void *parameter)
 {
@@ -101,7 +50,7 @@ void crosslinker_task(void *parameter)
 	{
 		if (xQueueReceive(mailbox, &received_message, portMAX_DELAY) == pdPASS)
 		{
-			// ESP_LOGD(TAG, "Crosslinker incoming:%s", received_message.str);
+			//ESP_LOGD(TAG, "Crosslinker incoming:%s", received_message.str);
 			char *event = received_message.str + strlen(me_config.device_name) + 1;
 			int slot_num;
 			if (strstr(event, "player") != NULL)
@@ -120,23 +69,21 @@ void crosslinker_task(void *parameter)
 					slot_num = -1;
 				}
 			}
-			// ESP_LOGD(TAG, "event:%s, slot_num=%d", event, slot_num);
+			//ESP_LOGD(TAG, "event:%s, slot_num=%d", event, slot_num);
 
-			if (slot_num >= 0)
+			if ((slot_num >= 0)&&(strlen(me_config.slot_cross_link[slot_num])>0))
 			{
 				char crosslinks[strlen(me_config.slot_cross_link[slot_num])];
 				strcpy(crosslinks, me_config.slot_cross_link[slot_num]);
 				char *crosslink = NULL;
 				char *croslink_rest = crosslinks;
 				uint8_t last_link = 0;
-				do
-				{
-					if (strstr(croslink_rest, ",") != NULL)
-					{
+				do{
+					if (strstr(croslink_rest, ",") != NULL){
 						crosslink = strtok_r(croslink_rest, ",", &croslink_rest);
+						//TO_DO verify cross link len
 					}
-					else
-					{
+					else{
 						crosslink = croslink_rest;
 						last_link = 1;
 					}
@@ -144,29 +91,25 @@ void crosslinker_task(void *parameter)
 					//					ESP_LOGD(TAG, "Cross_links string END:");
 					//					break;
 					//				}
-					if (crosslink != NULL)
-					{
-						// ESP_LOGD(TAG, "Cross_link:%s", crosslink);
+					if (crosslink != NULL){
+						//ESP_LOGD(TAG, "Cross_link:%s", crosslink);
 						char *trigger;
 						char *action;
 
 						trigger = strtok_r(crosslink, "=>", &action);
 						action = action + 1;
 
-						if (strstr(trigger, event) != NULL)
-						{
+						if (strstr(trigger, event) != NULL){
 							ESP_LOGD(TAG, "Crosslink event:%s, trigger=%s, action=%s", event, trigger, action);
 							char output_action[strlen(me_config.device_name) + strlen(action) + 2];
 							sprintf(output_action, "%s/%s", me_config.device_name, action);
 							execute(output_action);
 						}
-						else
-						{
+						else{
 							// ESP_LOGD(TAG, "BAD event:%s, trigger=%s, action=%s", event, trigger, action);
 						}
 					}
-					if (last_link == 1)
-					{
+					if (last_link == 1){
 						break;
 					}
 
@@ -197,20 +140,26 @@ void report(char *msg)
 	}
 	if((me_state.osc_socket >= 0))
 	{
-		char msg_copy[strlen(msg)];
-		strcpy(msg_copy, msg);
-		char tmpString[strlen(msg)+9];
+		char msg_copy[strlen(msg)+1];
+		if(msg[0]!='/'){
+			strcpy(msg_copy+1, msg);
+			msg_copy[0]='/';
+		}else{
+			strcpy(msg_copy, msg);
+		}
+		char tmpString[strlen(msg)+50];
 		char *rest;
 		char *tok = strtok_r(msg_copy, ":", &rest);
+		
 		int len=0;
 		if(strstr(rest, ".")!=NULL){
 			float tmp = atof(rest);
-			len = tosc_writeMessage(tmpString, strlen(msg)+9, tok, "f", tmp);
-			//ESP_LOGD(TAG, "OSC f string%s  rest:%f strlenMsg:%i", tmpString , tmp, strlen(msg));
+			len = tosc_writeMessage(tmpString, strlen(msg)+20, tok, "f", tmp);
+			ESP_LOGD(TAG, "OSC f string%s float:%f", tmpString, tmp );
 		}else{
 			int tmp = atoi(rest);
-			len = tosc_writeMessage(tmpString, strlen(msg)+9, tok, "i", tmp);
-			//ESP_LOGD(TAG, "OSC i string%s", tmpString );
+			len = tosc_writeMessage(tmpString, strlen(msg)+20, tok, "i", tmp);
+			ESP_LOGD(TAG, "OSC i string%s  tmp:%d", tmpString , tmp);
 		}
 		
 
@@ -224,12 +173,19 @@ void report(char *msg)
 		int res = sendto(me_state.osc_socket, tmpString, len, 0, (struct sockaddr *)&destAddr, sizeof(destAddr));
 		if (res < 0)
 		{
-			ESP_LOGE(TAG,"Failed to send osc errno: %d len:%d host:%d\n", errno, len, destAddr.sin_addr.s_addr);
+			ESP_LOGE(TAG,"Failed to send osc errno: %d len:%d string:%s\n", errno, len, tmpString);
+			//
+			err++;
+			if(err>10){
+				esp_restart();
+			}
 			return;
 		}
 		else
 		{
-			ESP_LOGD(TAG,"send osc OK: \n");
+			err--;
+			if(err<0)err=0;
+			//ESP_LOGD(TAG,"send osc OK: \n");
 		}
 	}
 
@@ -237,8 +193,7 @@ void report(char *msg)
 	message_t message;
 	message.length = strlen(msg);
 	strcpy(message.str, msg);
-	if (xQueueSend(mailbox, &message, portMAX_DELAY) != pdPASS)
-	{
+	if (xQueueSend(mailbox, &message, portMAX_DELAY) != pdPASS){
 		ESP_LOGE(TAG, "Send message FAIL");
 	}
 }

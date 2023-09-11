@@ -6,7 +6,6 @@
 #define MOSFET_MODULE 4
 
 
-
 int init_slots(void);
 
 int get_option_int_val(int num_of_slot, char* string);

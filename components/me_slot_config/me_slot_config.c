@@ -10,7 +10,7 @@
 #include "audioPlayer.h"
 #include "3n_mosfet.h"
 #include "encoders.h"
-#include "lidars.h"
+#include "TOFs.h"
 #include "tachometer.h"
 #include "analog.h"
 #include "esp_heap_caps.h"
@@ -23,7 +23,12 @@ static const char *TAG = "ME_SLOT_CONFIG";
 
 extern configuration me_config;
 
-uint8_t SLOTS_PIN_MAP[4][3] = {{4,5,10},{17,18,0},{6,7,8},{1,2,3}};
+//uint8_t SLOTS_PIN_MAP[4][3] = {{4,5,10},{17,18,0},{3,41,0},{2,1,0}}; //inty park solution, old boards v2.0
+//uint8_t SLOTS_PIN_MAP[4][3] = {{4,5,10},{17,18,0},{6,7,8},{1,2,3}}; // v2.1 
+//uint8_t SLOTS_PIN_MAP[6][3] = {{4,5,10},{17,18,15},{7,6,0},{3,8,0},{3,8,0},{41,42,0}}; //v2.2
+uint8_t SLOTS_PIN_MAP[6][4] = {{4,5,10,38},{40,21,47,48},{17,18,15,0},{3,8,39,0},{2,1,41,0},{7,6,42,0}}; //v3.x
+
+
 
 int init_slots(void){
 	uint32_t startTick = xTaskGetTickCount();
@@ -35,7 +40,7 @@ int init_slots(void){
 			audioInit();
 		}else if(!memcmp(me_config.slot_mode[i], "button_optorelay", 16)){
 			start_button_task(i);
-			init_optorelay(i);
+			//init_optorelay(i);
 		}else if(!memcmp(me_config.slot_mode[i], "button_led", 10)){
 			start_button_task(i);
 			init_led(i);
@@ -45,8 +50,8 @@ int init_slots(void){
 			start_encoderPWM_task(i);
 		}else if(!memcmp(me_config.slot_mode[i], "encoder_inc", 10)){
 			start_encoder_inc_task(i);
-		}else if(!memcmp(me_config.slot_mode[i], "benewake_lidar", 14)){
-			start_benewakeLidar_task(i);
+		}else if(!memcmp(me_config.slot_mode[i], "benewake_TOF", 12)){
+			start_benewakeTOF_task(i);
 		}else if(!memcmp(me_config.slot_mode[i], "tachometer", 10)){
 			start_tachometer_task(i);
 		}else if(!memcmp(me_config.slot_mode[i], "analog", 6)){

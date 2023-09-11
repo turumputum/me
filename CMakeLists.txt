@@ -10,3 +10,4 @@ project(${ProjectId})
 #spiffs_create_partition_image(storage font FLASH_IN_PROJECT)
 
 
+idf_build_set_property(COMPILE_OPTIONS "-fdiagnostics-color=always" APPEND)

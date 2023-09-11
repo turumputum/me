@@ -276,6 +276,7 @@ typedef int make_iso_compilers_happy;
 //--------------------------------------------------------------------+
 
 // Debug enable to print out error message
+
 #ifndef CFG_TUSB_DEBUG
   #define CFG_TUSB_DEBUG 0
 #endif

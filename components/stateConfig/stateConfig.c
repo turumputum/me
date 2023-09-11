@@ -52,7 +52,7 @@ static int handler(void *user, const char *section, const char *name, const char
 		pconfig->FTP_login = strdup(value);
 	} else if (MATCH("FTP", "FTP_pass")) {
 		pconfig->FTP_pass = strdup(value);
-	} else if (MATCH("UDP", "udpServerAdress")) {
+	} else if (MATCH("UDP", "udpServerAdress")){
 		pconfig->udpServerAdress = strdup(value);
 	} else if (MATCH("UDP", "udpServerPort")) {
 		pconfig->udpServerPort = atoi(value);

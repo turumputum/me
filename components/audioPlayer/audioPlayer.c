@@ -90,13 +90,16 @@ void audioInit(void) {
 		me_config.loop=0;
 	}
 
+	gpio_pad_select_gpio(38);
+	gpio_set_direction(38, GPIO_MODE_OUTPUT);
+	gpio_set_level(38, 0);
 
 	board_handle = audio_board_init();
 	audio_hal_ctrl_codec(board_handle->audio_hal, AUDIO_HAL_CODEC_MODE_DECODE, AUDIO_HAL_CTRL_START);
 
 	//ESP_LOGD(TAG, "Create audio pipeline for playback");
 	audio_pipeline_cfg_t pipeline_cfg = DEFAULT_AUDIO_PIPELINE_CONFIG();
-	pipeline_cfg.rb_size = 3 * 1024;
+	pipeline_cfg.rb_size = 8 * 1024;//3
 	pipeline = audio_pipeline_init(&pipeline_cfg);
 	mem_assert(pipeline);
 
@@ -117,7 +120,7 @@ void audioInit(void) {
 
 	//ESP_LOGD(TAG, "Create mp3 decoder to decode mp3 file");
 	mp3_decoder_cfg_t mp3_cfg = DEFAULT_MP3_DECODER_CONFIG();
-	mp3_cfg.out_rb_size = 3 * 1024;
+	//mp3_cfg.out_rb_size = 3 * 1024;
 	mp3_decoder = mp3_decoder_init(&mp3_cfg);
 
 	//ESP_LOGD(TAG, "Create resample filter");
@@ -232,6 +235,8 @@ void audioPlay(char *cmd) {
 
 	ESP_LOGD(TAG, "Start playing file:%s Heap usage:%d, Free heap:%d", me_config.soundTracks[me_state.currentTrack], heapBefore - xPortGetFreeHeapSize(), xPortGetFreeHeapSize());
 	
+	gpio_set_level(38, 1);
+
 	vTaskDelay(pdMS_TO_TICKS(10));
 	char tmpStr[strlen(me_config.device_name)+strlen("/player_start")+10];
 	sprintf(tmpStr,"%s/player_start:%d", me_config.device_name, me_state.currentTrack);
@@ -270,7 +275,7 @@ void audioShift(char *cmd){
 void audioStop(void) {
 	//audio_pipeline_pause(pipeline);
 	//ESP_ERROR_CHECK(audio_pipeline_stop(pipeline));
-
+	
 	audio_element_state_t el_state = audio_element_get_state(i2s_stream_writer);
 	ESP_LOGD(TAG, "audioStop state: %d", el_state);
 	if ((el_state != AEL_STATE_FINISHED) && (el_state != AEL_STATE_STOPPED)) {
@@ -283,6 +288,8 @@ void audioStop(void) {
 	ESP_ERROR_CHECK(audio_pipeline_reset_ringbuffer(pipeline));
 	ESP_ERROR_CHECK(audio_pipeline_reset_elements(pipeline));
 	ESP_ERROR_CHECK(audio_pipeline_change_state(pipeline, AEL_STATE_INIT));
+
+	gpio_set_level(38, 0);
 
 	ESP_LOGD(TAG, "Stop playing. Free heap:%d", xPortGetFreeHeapSize());
 }

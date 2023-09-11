@@ -1,1 +1,0 @@
-void start_benewakeLidar_task(int num_of_slot);

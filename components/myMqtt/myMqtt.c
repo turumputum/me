@@ -53,11 +53,9 @@ static void mqtt_event_handler(void *handler_args, esp_event_base_t base, int32_
 			mqtt_sub(me_state.action_topic_list[i]);
 		}
 
+		sprintf(willTopic, "clients/%s/state", me_config.device_name);
 		mqtt_pub(willTopic, "1");
 
-		char topicList_topic[255];
-		sprintf(topicList_topic, "clients/%s/topics", me_config.device_name);
-		
 		char tmpStr[50];
 		char topicList[1024] = "{\n\"triggers\":[\n";
 		for (int i = 0; i < me_state.triggers_topic_list_index; i++) {
@@ -75,6 +73,10 @@ static void mqtt_event_handler(void *handler_args, esp_event_base_t base, int32_
 		topicList[strlen(topicList) - 2] = '\0';
 		strcat(topicList, "\n]\n}");
 
+		char topicList_topic[255];
+		sprintf(topicList_topic, "clients/%s/topics", me_config.device_name);
+
+		mqtt_pub(topicList_topic, topicList);
 		printf("%s\n", topicList);
 
 		//char topicList_payload[strlen("{\n\"triggers\":[\n \n],\n\"actions\":[\n")+strlen(me_state.triggers_topic_list)+strlen(me_state.action_topic_list)+3];

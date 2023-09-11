@@ -20,6 +20,11 @@
 #include "stateConfig.h"
 
 #include "LAN.h"
+#include "ftp.h"
+#include "myMqtt.h"
+#include "tinyosc.h"
+#include "reporter.h"
+#include "executor.h"
 
 #define CONFIG_ETH_SPI_ETHERNET_W5500 1
 
@@ -35,6 +40,7 @@ typedef struct {
 
 extern configuration me_config;
 extern stateStruct me_state;
+extern QueueHandle_t exec_mailbox;
 
 static void eth_event_handler(void *arg, esp_event_base_t event_base, int32_t event_id, void *event_data) {
 	uint8_t mac_addr[6] = { 0 };
@@ -73,6 +79,81 @@ static void got_ip_event_handler(void *arg, esp_event_base_t event_base, int32_t
 	ESP_LOGI(TAG, "ETHMASK:" IPSTR, IP2STR(&ip_info->netmask));
 	ESP_LOGI(TAG, "ETHGW:" IPSTR, IP2STR(&ip_info->gw));
 	ESP_LOGI(TAG, "~~~~~~~~~~~");
+}
+
+void osc_recive_task(){
+	int buff_size=250;
+	char buff[buff_size];
+
+	tosc_message osc;
+
+	struct sockaddr_storage source_addr; // Large enough for both IPv4 or IPv6
+    socklen_t socklen = sizeof(source_addr);
+
+	struct sockaddr_in dest_addr;
+	dest_addr.sin_addr.s_addr = htonl(INADDR_ANY);
+	dest_addr.sin_family = AF_INET;
+	dest_addr.sin_port = htons(me_config.oscMyPort);
+
+	int err = bind(me_state.osc_socket, (struct sockaddr *)&dest_addr, sizeof(dest_addr));
+	if (err < 0) {
+		ESP_LOGE(TAG, "Socket unable to bind: errno %d", errno);
+	}
+
+	ESP_LOGD(TAG, "OSC revive task STARTED, on port:%d",me_config.oscMyPort);
+	while(1){
+		int len=recvfrom(me_state.osc_socket, buff, buff_size-1, 0,(struct sockaddr *)&source_addr, &socklen);
+		if(len<0){
+			ESP_LOGD(TAG, "OSC incoming fail(");
+		}else{
+			ESP_LOGD(TAG, "OSC incoming:%s", buff);
+			if (!tosc_parseMessage(&osc, buff, len)) {
+				//printf("Received OSC message: [%i bytes] %s %s ",
+					//len, // the number of bytes in the OSC message
+					//tosc_getAddress(&osc), // the OSC address string, e.g. "/button1"
+					tosc_getFormat(&osc); // the OSC format string, e.g. "f"
+				for (int i = 0; osc.format[i] != '\0'; i++) {
+					if(osc.format[i]== 'i'){
+						//printf("%i ", ); break;
+						exec_message_t message;
+						memset(message.str,0,strlen(message.str));
+						message.length = sprintf(message.str, "%s:%d", tosc_getAddress(&osc), tosc_getNextInt32(&osc));
+
+						ESP_LOGD(TAG, "Add to exec_queue:%s ",message.str);
+						if (xQueueSend(exec_mailbox, &message, portMAX_DELAY) != pdPASS) {
+							ESP_LOGE(TAG, "Send message FAIL");
+						}
+					} 
+				}
+				printf("\n");
+			}
+		}
+		vTaskDelay(pdMS_TO_TICKS(20));
+	}
+}
+
+void wait_lan()
+{
+	while (me_state.LAN_init_res != ESP_OK)
+	{
+		vTaskDelay(pdMS_TO_TICKS(100));
+	}
+
+	// if(me_config.MDNS_enable){
+	// 	mdns_start();
+	// }
+	if(me_config.FTP_enable){
+		//TO-DO speed up needed
+		xTaskCreatePinnedToCore(ftp_task, "FTP", 1024 * 10, NULL, configMAX_PRIORITIES - 5, NULL, 0);
+	}
+	if (strlen(me_config.mqttBrokerAdress) > 3)	{
+		mqtt_app_start();
+	}
+
+	if((me_state.osc_socket >= 0)&&(me_config.oscMyPort>0)){
+		xTaskCreate(osc_recive_task, "osc_recive_task", 1024 * 4, NULL, configMAX_PRIORITIES - 8, NULL);
+	}
+	vTaskDelete(NULL);
 }
 
 int LAN_init(void) {
@@ -199,6 +280,8 @@ int LAN_init(void) {
 		ESP_LOGD(TAG,"OSC skipped addr:%s", me_config.oscServerAdress);
 	}
 
+	xTaskCreate(wait_lan, "wait_lan", 1024 * 4, NULL, configMAX_PRIORITIES - 8, NULL);
+	vTaskDelay(pdMS_TO_TICKS(1000));
 
 	return 0;
 }
